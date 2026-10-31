@@ -48,7 +48,7 @@ def main(out):
     names = {}
     try:
         sealed = get(f"{BASE}/productList/products_nonsingles_{GAME}.json").get("products", [])
-        strip = re.compile(r"\s*(Booster Box|Booster Display|Display|Booster Bundle|Booster Pack|Booster|Elite Trainer Box|Build & Battle Box|Collection Box|Blister|Sleeved Booster|Case|Tin|Box|Pack)\b.*$", re.I)
+        strip = re.compile(r"\s*(Booster Box|Booster Display|Booster Bundle|Booster Pack|Sleeved Booster|Booster|Display|Elite Trainer Box|Build & Battle Box|Collection Box|Premium Collection|Blister|Case|Tin)\b.*$", re.I)
         for p in sealed:
             e, n = p.get("idExpansion"), (p.get("name") or "").strip()
             if not e or not n:
