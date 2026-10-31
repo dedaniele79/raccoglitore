@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-LyeiSU7fmGUUriUeZ9otQDbwT/iOrFCxnqR/NG43I5o=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AbGCw7Z5NP1pSlaCKHmCRBwbky+cETPwG108rXZBFjM=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -259,6 +259,10 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .photo-edit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ed-pick { font: inherit; font-size: 12px; font-weight: 800; border: 0; border-radius: 999px; padding: 3px 8px; background: color-mix(in srgb, var(--rc) 16%, transparent); color: var(--rc); appearance: none; -webkit-appearance: none; min-height: 24px; }
 .chip.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.custom-grid { display: flex; gap: 12px; align-items: flex-start; }
+.banner.family { display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--gold) 22%, var(--surface)); }
+.coll-switch { margin: 2px 0 0; }
+.custom-grid > img { flex: none; }
 .tray-item { display: flex; gap: 12px; align-items: center; padding: 10px 12px; min-width: 0; }
 .tray-item + .tray-item { border-top: 1px solid var(--line); }
 .tray-item .thumb { width: 46px; flex: none; }
@@ -340,7 +344,7 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.4";
+const APP_VERSION = "1.5";
 const APP_DATE = "31 ottobre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
@@ -363,6 +367,8 @@ function cardNumber(localId, official) {
   const id = String(localId ?? "");
   if (!official) return id;
   const w = Math.max(3, String(official).length);
+  // Numeri lunghi delle buste speciali (1807/07): il totale si scrive come stampato, a due cifre.
+  if (/^\d{4,}$/.test(id)) return `${id}/${String(official).padStart(2, "0")}`;
   return `${/^\d+$/.test(id) ? id.padStart(w, "0") : id}/${String(official).padStart(w, "0")}`;
 }
 
@@ -396,6 +402,7 @@ const Store = {
   },
   timer: null,
   save() {
+    if (viewing) return;
     clearTimeout(this.timer);
     this.timer = setTimeout(() => {
       const data = JSON.parse(JSON.stringify(state));
@@ -414,7 +421,9 @@ const idbReq = (mode, fn) => new Promise(res => {
 });
 const Photos = {
   urls: new Map(),
-  key: id => "photo:" + id,
+  prefix: "photo:",
+  key(id) { return this.prefix + id; },
+  reset() { for (const u of this.urls.values()) URL.revokeObjectURL(u); this.urls.clear(); },
   async put(id, blob) { if (!Store.db || !blob) return false; const ok = await idbReq("readwrite", s => s.put(blob, this.key(id))); this.drop(id); return !!ok; },
   get(id) { return Store.db ? idbReq("readonly", s => s.get(this.key(id))) : Promise.resolve(null); },
   drop(id) { const u = this.urls.get(id); if (u) { URL.revokeObjectURL(u); this.urls.delete(id); } },
@@ -457,12 +466,77 @@ const History = {
   async list() { const out = []; for (const k of (await this.keys()).sort().reverse()) { const v = await idbReq("readonly", s => s.get(k)); if (v) out.push({ key: k, at: v.at, copies: v.copies }); } return out; },
   get(k) { return idbReq("readonly", s => s.get(k)); }
 };
+// ================================================================ Collezioni di famiglia
+// Un familiare condivide la sua collezione come file; tu la apri e la guardi accanto alla tua, senza toccarla.
+const idbGet = k => Store.db ? idbReq("readonly", s => s.get(k)) : Promise.resolve(null);
+const idbPut = (k, v) => Store.db ? idbReq("readwrite", s => s.put(v, k)) : Promise.resolve(null);
+let viewing = null, myState = null;
+const Family = {
+  list: [],
+  async load() { const l = await idbGet("family:index"); this.list = Array.isArray(l) ? l : []; },
+  save() { return idbPut("family:index", this.list); },
+  async import(raw, fileName) {
+    const { state: clean } = sanitizeState(raw);
+    const owner = txt(raw?.share?.owner, 40).trim() || txt(String(fileName || "").replace(/\.json$/i, "").replace(/^collezione-/i, "").replace(/-\d{4}-\d{2}-\d{2}$/, ""), 40) || "Familiare";
+    let fam = this.list.find(f => f.name.toLowerCase() === owner.toLowerCase());
+    if (!fam) { fam = { id: uid().slice(0, 8), name: owner }; this.list.push(fam); }
+    else await this.dropPhotos(fam.id);
+    const ids = new Set(clean.copies.map(c => c.id));
+    let photos = 0;
+    if (isObj(raw.photos)) for (const [id, u] of Object.entries(raw.photos)) {
+      if (!ids.has(id) || typeof u !== "string" || u.length > 6e6 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u)) continue;
+      try { if (await idbPut(`fphoto:${fam.id}:${id}`, dataURLToBlob(u))) photos++; } catch {}
+    }
+    for (const c of clean.copies) if (c.photo && !raw.photos?.[c.id]) delete c.photo;
+    Object.assign(fam, { copies: clean.copies.length, value: Math.round(clean.copies.reduce((t, c) => t + (copyValueIn(clean, c) || 0), 0) * 100) / 100,
+      sharedAt: numIn(Date.parse(raw?.share?.sharedAt), 0, 1e14) || Date.now(), importedAt: Date.now(), photos });
+    await idbPut("family:" + fam.id, clean);
+    await this.save();
+    return fam;
+  },
+  async dropPhotos(id) {
+    const keys = (await idbReq("readonly", s => s.getAllKeys())) || [];
+    for (const k of keys) if (String(k).startsWith(`fphoto:${id}:`)) idbReq("readwrite", s => s.delete(k));
+  },
+  async remove(id) {
+    await this.dropPhotos(id);
+    idbReq("readwrite", s => s.delete("family:" + id));
+    this.list = this.list.filter(f => f.id !== id);
+    await this.save();
+  }
+};
+// Valore di una copia in una collezione qualsiasi (stesse regole della tua).
+function copyValueIn(st, cp) {
+  if (cp.personal != null) return cp.personal;
+  const card = st.cards[cp.cardKey]; if (!card) return null;
+  const p = marketPrice(card, cp.variant);
+  return p == null ? null : p * (st.settings.coef?.[cp.lang] ?? 1);
+}
+async function viewCollection(id) {
+  stopScanner(); closeSheet();
+  if (!id || id === "me") {
+    if (viewing) { state = myState; viewing = null; myState = null; Photos.prefix = "photo:"; Photos.reset(); }
+  } else {
+    const fam = Family.list.find(f => f.id === id), data = fam && await idbGet("family:" + id);
+    if (!data) { toast("Questa collezione non è più disponibile"); return; }
+    if (!viewing) myState = state;
+    state = data; viewing = { id, name: fam.name, sharedAt: fam.sharedAt };
+    Photos.prefix = `fphoto:${id}:`; Photos.reset();
+  }
+  ui.setView = null; ui.browse = null; ui.mineQ = ""; ui.edFilter = "all";
+  if (ui.tab === "scan" || ui.tab === "search") ui.tab = "collection";
+  render();
+}
+const familyBanner = () => viewing ? `<div class="banner family"><div class="grow">Stai guardando la collezione di <b>${esc(viewing.name)}</b> · condivisa il ${esc(new Date(viewing.sharedAt).toLocaleDateString("it-IT", { day: "numeric", month: "long" }))}. Qui puoi solo guardare.</div><button class="btn small" data-action="family-exit">Torna alla tua</button></div>` : "";
+const READ_ONLY_ACTIONS = new Set(["new-copy", "edit-copy", "delete-copy", "quick-add", "remove-copy", "cycle-variant", "refresh", "custom-add", "restore-hist", "backup", "remove-photo", "scan-this-set", "share-mine"]);
+
 // Copia di sicurezza completa: collezione, impostazioni e foto.
-async function backupJSON() {
+async function backupJSON(share) {
   const data = JSON.parse(JSON.stringify(state)), photos = {};
   for (const c of state.copies) if (c.photo) { const b = await Photos.get(c.id); if (b instanceof Blob) photos[c.id] = await blobToDataURL(b); }
   data.photos = photos;
   data.app = { name: "Raccoglitore TCG", version: APP_VERSION, saved: new Date().toISOString() };
+  data.share = { owner: state.settings.ownerName || "", sharedAt: new Date().toISOString() };
   return JSON.stringify(data);
 }
 // Rimette le foto di una copia di sicurezza, solo per copie che esistono e solo immagini vere.
@@ -503,7 +577,7 @@ function cleanCard(c) {
   return {
     key: `${lang}|${id}`, id, lang, name: txt(c.name, 120), localId: txt(c.localId, 20), setId: txt(c.setId, 60), setName: txt(c.setName, 120),
     official: numIn(c.official, 0, 5000) ?? 0, rarity: txt(c.rarity, 60), illustrator: txt(c.illustrator, 80),
-    image: ASSET_RE.test(c.image) ? c.image : "", variants, example: c.example === true,
+    image: ASSET_RE.test(c.image) ? c.image : "", variants, example: c.example === true, ...(c.custom === true ? { custom: true } : {}),
     cm: { trend: price("trend"), avg30: price("avg30"), low: price("low"), trendHolo: price("trendHolo"), avg30Holo: price("avg30Holo"),
           lowHolo: price("lowHolo"), updated: DATE_RE.test(cm.updated) ? cm.updated : null },
     fetched: numIn(c.fetched, 0, 1e14) ?? 0
@@ -550,7 +624,7 @@ function sanitizeState(raw) {
   const coef = {};
   if (isObj(st.coef)) for (const [k, v] of Object.entries(st.coef)) { const n = numIn(v, 0.01, 10); if (langOk(k) && n != null) coef[k] = n; }
   const settings = { lang: langOk(st.lang) || "it", cond: COND_CODES.includes(st.cond) ? st.cond : "NM", coef,
-    onboarded: st.onboarded === true, installDismissed: st.installDismissed === true };
+    onboarded: st.onboarded === true, installDismissed: st.installDismissed === true, ownerName: txt(st.ownerName, 40).trim() };
   if (langOk(st.scanLang) || st.scanLang === "auto") settings.scanLang = st.scanLang;
   const clean = { cards, sets, copies, snapshots, settings, lastRefresh: numIn(raw.lastRefresh, 0, 1e14) ?? 0 };
   const lb = numIn(raw.lastBackup, 0, 1e14); if (lb) clean.lastBackup = lb;
@@ -626,7 +700,19 @@ async function ensureSet(setId, lang) {
   if (s && Date.now() - s.fetched < 30 * 864e5) return s;
   return storeSet(await api(lang, `sets/${encodeURIComponent(setId)}`), lang);
 }
+// Carte fuori catalogo: TCGdex non ha tutte le carte (per esempio molte buste speciali cinesi).
+// Si archiviano lo stesso con foto, nome, numero ed espansione; il valore lo inserisci tu.
+function makeCustomCard({ name, number, total, lang, setId, setName }) {
+  const id = "custom-" + uid().replace(/-/g, "").slice(0, 10);
+  const card = { key: `${lang}|${id}`, id, lang, name: name || "Carta senza nome", localId: String(number || "?"), setId: setId || "altro",
+    setName: setName || "Altre carte", official: total || 0, rarity: "", illustrator: "", image: "", custom: true,
+    variants: { normal: true, reverse: true, holo: true, firstEdition: false }, example: false,
+    cm: { trend: null, avg30: null, low: null, trendHolo: null, avg30Holo: null, lowHolo: null, updated: null }, fetched: Date.now() };
+  state.cards[card.key] = card;
+  return card;
+}
 async function loadCard(id, lang, force) {
+  if (state.cards[`${lang}|${id}`]?.custom) return state.cards[`${lang}|${id}`];
   const fresh = c => c && !force && Date.now() - c.fetched < 12 * 3600e3;
   if (fresh(state.cards[`${lang}|${id}`])) return state.cards[`${lang}|${id}`];
   let used = lang, data;
@@ -685,6 +771,7 @@ async function refreshPrices(onProgress) {
     await Promise.all(keys.slice(i, i + 6).map(async key => {
       const c = state.cards[key];
       if (!c) { ko++; return; }
+      if (c.custom) return;
       try {
         memo.delete(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
         const fresh = cardFromApi(await api(c.lang, `cards/${encodeURIComponent(c.id)}`), c.lang);
@@ -700,10 +787,11 @@ async function refreshPrices(onProgress) {
 
 // ================================================================ Dal numero stampato alla carta
 function parseNumber(text) {
-  const m = String(text).toUpperCase().replace(/[|\\]/g, "/").match(/(?<![0-9A-Z])([A-Z]{0,3}[0-9]{1,3})\s?[\/-]\s?([0-9]{2,3})(?![0-9])/);
+  // Separatori accettati: / - . , oppure uno spazio (sulla tastiera numerica dell'iPhone la barra non c'è).
+  const m = String(text).toUpperCase().replace(/[|\\]/g, "/").match(/(?<![0-9A-Z])([A-Z]{0,3}[0-9]{1,4})\s*(?:[\/\-.,]|\s)\s*([0-9]{1,3})(?![0-9])/);
   if (m) {
     const n = parseInt(m[1].replace(/\D/g, ""), 10), t = parseInt(m[2], 10);
-    if (isNaN(n) || isNaN(t) || n === 0 || n > t + 150) return null;
+    if (isNaN(n) || isNaN(t) || n === 0 || (n > t + 150 && !(t <= 30 && n <= 9999))) return null;
     return { number: m[1], total: t };
   }
   const plain = String(text).trim();
@@ -788,9 +876,10 @@ function setHeader(title, back) { $("#title").textContent = title; $("#back").hi
 const previewBanner = () => online ? "" : `<div class="banner">Anteprima con carte e prezzi <b>di esempio</b>: qui il catalogo online è bloccato. Messa online, l'app usa il catalogo TCGdex con i prezzi Cardmarket.</div>`;
 
 function render() {
+  if (viewing && ui.tab === "scan") { viewCollection(null); toast("Sei tornato alla tua collezione per scansionare"); return; }
   document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === ui.tab ? "page" : "false"));
   if (ui.tab !== "scan") stopScanner();
-  const banner = previewBanner();
+  const banner = previewBanner() + familyBanner();
   ({ collection: renderCollection, scan: renderScan, value: renderValue, trades: renderTrades, search: renderSearch })[ui.tab](banner);
 }
 
@@ -823,7 +912,7 @@ function valueDelta() {
 function renderCollection(banner) {
   if (ui.setView) return renderBinder(banner);
   if (ui.browse) return renderBrowse(banner);
-  setHeader("La mia collezione", false);
+  setHeader(viewing ? `Collezione di ${viewing.name}` : "La mia collezione", false);
   const all = summaries();
   const distinct = new Set(state.copies.map(c => cardOf(c)?.id)).size;
   const eds = EDITION_ORDER.filter(e => all.some(s => s.ed === e));
@@ -835,13 +924,15 @@ function renderCollection(banner) {
       <div class="stats"><span><b>${state.copies.length}</b> copie</span><span><b>${distinct}</b> carte</span><span><b>${all.length}</b> espansioni</span></div>
       ${valueDelta()}
     </div></section>
-    <div class="quick"><button class="btn gold" data-tab="scan">Scansiona carte</button><button class="btn" data-action="browse">Tutte le espansioni</button></div>
-    ${notices()}`;
+    ${Family.list.length ? `<div class="coll-switch">${seg("coll-switch", [["me", "La mia"], ...Family.list.map(f => [f.id, esc(f.name)])], viewing?.id || "me")}</div>` : ""}
+    ${viewing ? `<div class="quick"><button class="btn" data-action="browse">Tutte le espansioni</button><button class="btn ghost" data-action="family-exit">Torna alla tua</button></div>`
+      : `<div class="quick"><button class="btn gold" data-tab="scan">Scansiona carte</button><button class="btn" data-action="browse">Tutte le espansioni</button><button class="btn ghost" data-action="share-mine">Condividi</button></div>`}
+    ${viewing ? "" : notices()}`;
   if (!state.copies.length) {
     html += `<section class="panel empty"><h2>Il raccoglitore è vuoto</h2><p class="note">Inizia dalla scansione: inquadri le carte una dopo l'altra e l'app le archivia per edizione, serie ed espansione.</p></section>`;
     main.innerHTML = html; return;
   }
-  html += `<form class="searchbar" id="mine-form" role="search"><input id="mine-q" type="search" placeholder="Cerca nella tua collezione" value="${esc(ui.mineQ)}" aria-label="Cerca nella tua collezione" autocomplete="off" enterkeyhint="search"><button class="btn" type="submit">Cerca</button></form><div id="mine-results"></div><div id="sets-area">`;
+  html += `<form class="searchbar" id="mine-form" role="search"><input id="mine-q" type="search" placeholder="${viewing ? "Cerca in questa collezione" : "Cerca nella tua collezione"}" value="${esc(ui.mineQ)}" aria-label="Cerca nella collezione" autocomplete="off" enterkeyhint="search"><button class="btn" type="submit">Cerca</button></form><div id="mine-results"></div><div id="sets-area">`;
   if (eds.length > 1) html += seg("ed-filter", [["all", "Tutte", null], ...eds.map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`, all.filter(s => s.ed === e).length])], ui.edFilter);
   html += `<div style="margin-top:10px">${seg("sort-sets", [["recent", "Più recenti"], ["value", "Valore"], ["completion", "Completamento"]], ui.sort)}</div>`;
   const tile = (s, ed) => {
@@ -926,8 +1017,12 @@ async function renderBinder(banner) {
   setHeader("Espansione", true);
   main.innerHTML = banner + `<p class="note">Apro il raccoglitore…</p>`;
   let res;
+  const customs = Object.values(state.cards).filter(k => k.custom && k.setId === view.setId && regionOf(k.lang) === regionOf(view.lang));
   try { res = await fetchSet(view.setId, view.lang); }
-  catch (e) { main.innerHTML = banner + `<section class="panel empty"><h2>Espansione non disponibile</h2><p class="note">${esc(e.message)}</p></section>`; return; }
+  catch (e) {
+    if (!customs.length) { main.innerHTML = banner + `<section class="panel empty"><h2>Espansione non disponibile</h2><p class="note">${esc(e.message)}</p></section>`; return; }
+    res = { lang: view.lang, data: { id: view.setId, name: customs[0].setName, cards: [], cardCount: { official: customs[0].official } } };
+  }
   if (ui.setView !== view || ui.tab !== "collection") return;
   const d = res.data, ed = view.ed;
   setHeader(d.name, true);
@@ -936,6 +1031,9 @@ async function renderBinder(banner) {
   const mine = view.img === "mine";
   const official = d.cardCount?.official || 0;
   const cards = (d.cards || []).map(c => ({ ...c, localId: String(c.localId) }));
+  // Le carte che il catalogo non ha, ma tu sì.
+  for (const k of customs) if (!cards.some(c => c.id === k.id)) cards.push({ id: k.id, localId: k.localId, name: k.name, image: "", custom: true, lang: k.lang });
+  cards.sort((a, b) => (parseInt(a.localId, 10) || 0) - (parseInt(b.localId, 10) || 0));
   const have = cards.filter(c => owned[c.id]).length;
   const visible = view.filter === "missing" ? cards.filter(c => !owned[c.id]) : view.filter === "owned" ? cards.filter(c => owned[c.id]) : cards;
   const pct = cards.length ? have / cards.length : 0;
@@ -944,8 +1042,8 @@ async function renderBinder(banner) {
   for (let i = 0; i < visible.length; i += 9) {
     const slice = visible.slice(i, i + 9);
     pages += `<div class="page"><div class="page-label"><span>Pagina ${i / 9 + 1}</span><span class="num">${esc(cardNumber(slice[0].localId, official).split("/")[0])}–${esc(cardNumber(slice[slice.length - 1].localId, official).split("/")[0])}</span></div>${slice.map(c => `
-      <button class="pocket ${owned[c.id] ? "owned" : "missing"}" data-action="open-card" data-id="${esc(c.id)}" data-lang="${esc(res.lang)}" data-ed="${esc(ed)}" aria-label="${esc(c.name)} ${esc(cardNumber(c.localId, official))}, ${owned[c.id] ? owned[c.id] + " possedute" : "mancante"}">
-        ${mine && myPhoto[c.id] ? `<div class="art"><img class="photo" data-photo="${esc(myPhoto[c.id])}" alt="La tua foto"></div>` : art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
+      <button class="pocket ${owned[c.id] ? "owned" : "missing"}" data-action="open-card" data-id="${esc(c.id)}" data-lang="${esc(c.lang || res.lang)}" data-ed="${esc(ed)}" aria-label="${esc(c.name)} ${esc(cardNumber(c.localId, official))}, ${owned[c.id] ? owned[c.id] + " possedute" : "mancante"}">
+        ${(mine || c.custom) && myPhoto[c.id] ? `<div class="art"><img class="photo" data-photo="${esc(myPhoto[c.id])}" alt="La tua foto"></div>` : art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
         <span class="label num">${esc(cardNumber(c.localId, official))}</span>
       </button>`).join("")}</div>`;
   }
@@ -994,7 +1092,7 @@ async function renderBrowse(banner) {
 // 3) Analisi della carta intera: lingua (testo occidentale o scrittura asiatica), nome, foto.
 // 4) Ricerca nel catalogo: carta unica e nome coerente → aggiunta automatica con la foto; altrimenti scelta con un tocco.
 const scan = {
-  lang: null, variant: "normal", cond: null, auto: true, lockSet: null,
+  lang: null, variant: "auto", cond: null, auto: true, lockSet: null,
   running: false, paused: false, busy: false, status: "", votes: new Map(), frame: 0, cooldown: new Map(),
   pending: null, session: [], info: new Map(), fresh: null, cameraOff: false, timer: null, lastLang: null, capture: false, side: null
 };
@@ -1080,6 +1178,106 @@ function snapshot(src, r, maxW = 1100) {
   g.drawImage(src, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - r.x) * k, (cy0 - r.y) * k, (cx1 - cx0) * k, (cy1 - cy0) * k);
   return c;
 }
+// ---------------------------------------------------------------- Ritaglio della carta
+// I quattro bordi della carta sono linee dritte e lunghe. Per ognuno cerco la linea più esterna e forte,
+// separatamente nelle due metà (così si vedono anche carta storta e prospettiva), poi raddrizzo la carta.
+// frame: dove ci si aspetta la carta (la cornice gialla). Si cerca in una zona più larga del 12% e, tra le linee forti,
+// si sceglie quella più vicina al lato atteso: le righe dello sfondo sono più lontane, il bordo dell'illustrazione più dentro.
+// Senza cornice (foto scelta dal rullino) vince la linea più forte.
+function cardEdges(src, frame, guided = false) {
+  const W = src.videoWidth || src.naturalWidth || src.width, H = src.videoHeight || src.naturalHeight || src.height;
+  const m = guided ? 0.12 : 0;
+  const ax = frame.x - frame.w * m, ay = frame.y - frame.h * m, aw = frame.w * (1 + 2 * m), ah = frame.h * (1 + 2 * m);
+  const x0 = Math.max(0, ax), y0 = Math.max(0, ay), x1 = Math.min(W, ax + aw), y1 = Math.min(H, ay + ah);
+  if (x1 - x0 < 50 || y1 - y0 < 50) return null;
+  const cw = 280, k = cw / (x1 - x0), ch = Math.max(20, Math.round((y1 - y0) * k));
+  const c = document.createElement("canvas"); c.width = cw; c.height = ch;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.drawImage(src, x0, y0, x1 - x0, y1 - y0, 0, 0, cw, ch);
+  const d = g.getImageData(0, 0, cw, ch).data, L = new Float32Array(cw * ch);
+  for (let i = 0; i < cw * ch; i++) L[i] = 0.3 * d[i * 4] + 0.59 * d[i * 4 + 1] + 0.11 * d[i * 4 + 2];
+  const T = 22;
+  const colTop = new Float32Array(cw), colBot = new Float32Array(cw), rowL = new Float32Array(ch), rowR = new Float32Array(ch);
+  for (let y = 2; y < ch - 2; y++) for (let x = 2; x < cw - 2; x++) {
+    const i = y * cw + x;
+    if (Math.abs(L[i + 2] - L[i - 2]) > T) (y < ch / 2 ? colTop : colBot)[x]++;
+    if (Math.abs(L[i + 2 * cw] - L[i - 2 * cw]) > T) (x < cw / 2 ? rowL : rowR)[y]++;
+  }
+  const smooth = a => { const o = new Float32Array(a.length); for (let i = 0; i < a.length; i++) for (let j = -2; j <= 2; j++) o[i] += a[Math.min(a.length - 1, Math.max(0, i + j))]; return o; };
+  // Posizione attesa dei lati nella zona cercata (in pixel ridotti).
+  const ex = { l: (frame.x - x0) * k, r: (frame.x + frame.w - x0) * k, t: (frame.y - y0) * k, b: (frame.y + frame.h - y0) * k };
+  const pick = (a, want, span, need) => {
+    const s = smooth(a), lo = Math.max(1, Math.round(want - span)), hi = Math.min(a.length - 2, Math.round(want + span));
+    let max = 0; for (let i = lo; i <= hi; i++) max = Math.max(max, s[i]);
+    if (max < need) return null;
+    let best = null;
+    for (let i = lo; i <= hi; i++) if (s[i] >= 0.5 * max && s[i] >= s[i - 1] && s[i] >= s[i + 1]) {
+      const score = guided ? -Math.abs(i - want) : s[i];
+      if (!best || score > best.score) best = { i, score };
+    }
+    return best?.i ?? null;
+  };
+  const needV = ch / 2 * 0.4 * 2.5, needH = cw / 2 * 0.4 * 2.5;
+  const sx = guided ? cw * 0.2 : cw * 0.45, sy = guided ? ch * 0.2 : ch * 0.45;
+  const L0 = guided ? ex.l : 0, R0 = guided ? ex.r : cw, T0 = guided ? ex.t : 0, B0 = guided ? ex.b : ch;
+  const lt = pick(colTop, L0, sx, needV), lb = pick(colBot, L0, sx, needV), rt = pick(colTop, R0, sx, needV), rb = pick(colBot, R0, sx, needV);
+  const tl = pick(rowL, T0, sy, needH), tr = pick(rowR, T0, sy, needH), bl = pick(rowL, B0, sy, needH), br = pick(rowR, B0, sy, needH);
+  if ([lt, lb, rt, rb, tl, tr, bl, br].some(v => v == null)) return null;
+  const lineV = (a, b) => ({ p: [a, ch * 0.25], q: [b, ch * 0.75] }), lineH = (a, b) => ({ p: [cw * 0.25, a], q: [cw * 0.75, b] });
+  const cross = (A, B) => {
+    const [x1, y1] = A.p, [x2, y2] = A.q, [x3, y3] = B.p, [x4, y4] = B.q;
+    const den = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4); if (Math.abs(den) < 1e-6) return null;
+    const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / den;
+    return [x1 + t * (x2 - x1), y1 + t * (y2 - y1)];
+  };
+  const q = [cross(lineH(tl, tr), lineV(lt, lb)), cross(lineH(tl, tr), lineV(rt, rb)), cross(lineH(bl, br), lineV(rt, rb)), cross(lineH(bl, br), lineV(lt, lb))];
+  if (q.some(p => !p)) return null;
+  const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
+  const wTop = dist(q[0], q[1]), wBot = dist(q[3], q[2]), hL = dist(q[0], q[3]), hR = dist(q[1], q[2]);
+  const ar = (wTop + wBot) / (hL + hR);
+  if (ar < 0.64 || ar > 0.82 || Math.abs(wTop - wBot) > 0.15 * wTop || Math.abs(hL - hR) > 0.15 * hL) return null;
+  if (guided && (wTop < (ex.r - ex.l) * 0.7 || hL < (ex.b - ex.t) * 0.7)) return null;
+  return q.map(([x, y]) => [x0 + x / k, y0 + y / k]);
+}
+// Carta raddrizzata: dai quattro angoli a un rettangolo (proporzioni della carta).
+function warpCard(src, quad, outW = 720) {
+  const outH = Math.round(outW * 337 / 245);
+  const W = src.videoWidth || src.naturalWidth || src.width, H = src.videoHeight || src.naturalHeight || src.height;
+  const xs = quad.map(p => p[0]), ys = quad.map(p => p[1]);
+  const bx = Math.max(0, Math.floor(Math.min(...xs))), by = Math.max(0, Math.floor(Math.min(...ys)));
+  const bw = Math.min(W, Math.ceil(Math.max(...xs))) - bx, bh = Math.min(H, Math.ceil(Math.max(...ys))) - by;
+  const sc = Math.min(1, (outW * 1.15) / bw);
+  const sw = Math.max(1, Math.round(bw * sc)), sh = Math.max(1, Math.round(bh * sc));
+  const s = document.createElement("canvas"); s.width = sw; s.height = sh;
+  const sg = s.getContext("2d", { willReadFrequently: true }); sg.imageSmoothingQuality = "high";
+  sg.drawImage(src, bx, by, bw, bh, 0, 0, sw, sh);
+  const sd = sg.getImageData(0, 0, sw, sh).data;
+  const o = document.createElement("canvas"); o.width = outW; o.height = outH;
+  const og = o.getContext("2d"), od = og.createImageData(outW, outH);
+  const P = quad.map(([x, y]) => [(x - bx) * sc, (y - by) * sc]);
+  for (let v = 0; v < outH; v++) {
+    const fv = (v + 0.5) / outH;
+    const lx = P[0][0] + (P[3][0] - P[0][0]) * fv, ly = P[0][1] + (P[3][1] - P[0][1]) * fv;
+    const rx = P[1][0] + (P[2][0] - P[1][0]) * fv, ry = P[1][1] + (P[2][1] - P[1][1]) * fv;
+    for (let u = 0; u < outW; u++) {
+      const fu = (u + 0.5) / outW, x = lx + (rx - lx) * fu, y = ly + (ry - ly) * fu;
+      const xi = Math.min(sw - 2, Math.max(0, x | 0)), yi = Math.min(sh - 2, Math.max(0, y | 0)), ax = x - xi, ay = y - yi;
+      const i00 = (yi * sw + xi) * 4, i10 = i00 + 4, i01 = i00 + sw * 4, i11 = i01 + 4, j = (v * outW + u) * 4;
+      for (let ch = 0; ch < 3; ch++) od.data[j + ch] = (sd[i00 + ch] * (1 - ax) + sd[i10 + ch] * ax) * (1 - ay) + (sd[i01 + ch] * (1 - ax) + sd[i11 + ch] * ax) * ay;
+      od.data[j + 3] = 255;
+    }
+  }
+  og.putImageData(od, 0, 0);
+  return o;
+}
+
+// La carta raddrizzata se si trovano i bordi, altrimenti il contenuto della cornice.
+function cardImage(src, r, outW = 1100) {
+  const area = { x: r.x - r.w * 0.12, y: r.y - r.h * 0.12, w: r.w * 1.24, h: r.h * 1.24 };
+  let quad = null;
+  try { quad = cardEdges(src, area, false); } catch {}
+  return quad ? warpCard(src, quad, outW) : snapshot(src, r, outW);
+}
 function photoBlob(canvas, maxW = 720) {
   const k = Math.min(1, maxW / canvas.width), c = document.createElement("canvas");
   c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
@@ -1093,14 +1291,14 @@ function photoBlob(canvas, maxW = 720) {
 const normDigits = t => String(t).replace(/[OoDQ]/g, "0").replace(/[Il|!i\][]/g, "1").replace(/[Ss]/g, "5").replace(/B/g, "8").replace(/[Zz]/g, "2").replace(/G/g, "6").replace(/\\/g, "/");
 function numberCandidates(text, totals) {
   const s = normDigits(text), out = [];
-  const add = (n, t, pri) => { if (n >= 1 && (totals.size ? totals.has(t) : t >= 10) && n <= t + 150 && !out.some(o => o.n === n && o.t === t)) out.push({ n, t, pri }); };
+  const add = (n, t, pri) => { if (n >= 1 && (totals.size ? totals.has(t) : t >= 5) && (n <= t + 150 || (t <= 30 && n <= 9999)) && !out.some(o => o.n === n && o.t === t)) out.push({ n, t, pri }); };
   for (let i = 1; i < s.length - 2; i++) {
     const ch = s[i]; if (!"/71".includes(ch)) continue;
-    const before = s.slice(Math.max(0, i - 3), i).match(/\d+$/)?.[0], after = s.slice(i + 1).match(/^\s?(\d{2,3})/);
+    const before = s.slice(Math.max(0, i - 4), i).match(/\d+$/)?.[0], after = s.slice(i + 1).match(/^\s?(\d{2,3})/);
     if (!before || !after) continue;
     for (const tl of [3, 2]) {
       const tt = after[1].slice(0, tl); if (tt.length !== tl) continue;
-      for (const nl of [3, 2, 1]) if (before.length >= nl) add(parseInt(before.slice(-nl), 10), parseInt(tt, 10), ch === "/" ? 2 : 1);
+      for (const nl of [4, 3, 2, 1]) if (before.length >= nl) add(parseInt(before.slice(-nl), 10), parseInt(tt, 10), ch === "/" ? 2 : 1);
     }
   }
   return out.sort((a, b) => b.pri - a.pri);
@@ -1284,7 +1482,7 @@ async function loop() {
         // Un lato per fotogramma: quello dell'ultima carta riconosciuta due volte su tre, altrimenti si alternano.
         const side = scan.side == null ? k % 2 : (k % 3 === 2 ? 1 - scan.side : scan.side);
         const hit = vote(await readNumber(worker, v, r, NUM_PASSES[k % NUM_PASSES.length], totals, [side]));
-        if (hit) { scan.handled = true; await recognize(snapshot(v, r), [hit]); }
+        if (hit) { scan.handled = true; await recognize(cardImage(v, r), [hit]); }
         // Carta ferma da un po' ma numero illeggibile: scatto da solo e provo anche con il nome.
         else if (!scan.handled && scan.steady >= 8 && sigSpread(sig) > 22) { scan.handled = true; scan.votes.clear(); await captureFrom(v, [r]); }
       }
@@ -1297,15 +1495,50 @@ async function loop() {
   if (scan.running) scan.timer = setTimeout(loop, 120);
 }
 // Scatto manuale (pulsante o foto): analizza l'immagine anche se il numero non si legge, e prova con il nome.
-async function captureFrom(src, rects) {
+async function captureFrom(src, rects, whole) {
   setScanStatus("Analizzo la foto…", "hit");
   const worker = await loadOCR(), totals = await knownTotals(scanLangs());
-  let cands = [], used = rects[0];
-  for (const r of rects) {
-    for (const pass of NUM_PASSES) { cands = await readNumber(worker, src, r, pass, totals); if (cands.length) break; }
-    if (cands.length) { used = r; break; }
+  // Foto dal rullino: cerco la carta in tutta l'immagine; dalla fotocamera: attorno alla cornice.
+  let still = null;
+  if (whole) { try { const { w, h } = srcSize(src), q = cardEdges(src, { x: 0, y: 0, w, h }, false); if (q) still = warpCard(src, q, 1100); } catch {} }
+  else still = cardImage(src, rects[0]);
+  const tries = still ? [[still, { x: 0, y: 0, w: still.width, h: still.height }]] : rects.map(r => [src, r]);
+  let cands = [], used = tries[0];
+  for (const [s, r] of tries) {
+    for (const pass of NUM_PASSES) { cands = await readNumber(worker, s, r, pass, totals); if (cands.length) break; }
+    if (cands.length) { used = [s, r]; break; }
   }
-  await recognize(snapshot(src, used), cands);
+  await recognize(still || snapshot(used[0], used[1]), cands);
+}
+
+// ---------------------------------------------------------------- Variante (normale, reverse, holo)
+// Il catalogo dice quali varianti esistono: se ce n'è una sola, è quella. Altrimenti confronto quanto "brillano" la zona
+// del testo e l'illustrazione rispetto all'immagine del catalogo: nella reverse luccica il testo, nella holo l'illustrazione.
+const loadImg = src => new Promise((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = src; });
+function texture(c, [x0, x1, y0, y1]) {
+  const { w: W, h: H } = srcSize(c), sw = W * (x1 - x0), sh = H * (y1 - y0), tw = 160, th = Math.max(8, Math.round(160 * sh / sw));
+  const t = document.createElement("canvas"); t.width = tw; t.height = th;
+  const g = t.getContext("2d", { willReadFrequently: true }); g.drawImage(c, W * x0, H * y0, sw, sh, 0, 0, tw, th);
+  const d = g.getImageData(0, 0, tw, th).data; let e = 0, n = 0;
+  for (let y = 1; y < th; y++) for (let x = 1; x < tw; x++) {
+    const i = (y * tw + x) * 4, j = i - 4, k = i - tw * 4, l = d[i] + d[i + 1] + d[i + 2];
+    e += Math.abs(l - d[j] - d[j + 1] - d[j + 2]) + Math.abs(l - d[k] - d[k + 1] - d[k + 2]); n++;
+  }
+  return e / Math.max(1, n);
+}
+async function guessVariant(card, still) {
+  const avail = Object.keys(card.variants).filter(k => card.variants[k] && k !== "firstEdition");
+  const base = avail.includes("normal") ? "normal" : avail.includes("holo") ? "holo" : (avail[0] || "normal");
+  if (avail.length <= 1) return { variant: base, sure: true };
+  if (!still || !card.image) return { variant: base, sure: false };
+  try {
+    const ref = await loadImg(imgUrl(card.image, true));
+    const TEXT = [0.08, 0.92, 0.6, 0.86], ART = [0.1, 0.9, 0.13, 0.46];
+    const rel = (texture(still, TEXT) / Math.max(1, texture(ref, TEXT))) / (texture(still, ART) / Math.max(1, texture(ref, ART)));
+    if (avail.includes("reverse") && rel > 1.5) return { variant: "reverse", sure: false, rel };
+    if (avail.includes("holo") && rel < 0.67) return { variant: "holo", sure: false, rel };
+    return { variant: base, sure: false, rel };
+  } catch { return { variant: base, sure: false }; }
 }
 
 // ---------------------------------------------------------------- Dalla carta letta alla collezione
@@ -1341,10 +1574,16 @@ async function recognize(still, cands) {
       } catch {}
     }
   }
+  // Carte fuori catalogo che hai già archiviato con lo stesso numero.
+  if (!items.length && cands.length) {
+    const known = customMatches(cands);
+    if (known.length) { items = known; lang = known[0].lang; label = cardNumber(known[0].localId, known[0].official); }
+  }
   if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   if (!items.length) {
-    setScanStatus(n0 ? `Nessuna carta ${cardNumber(String(n0.n), n0.t)} in ${edName(info.lang).toLowerCase()}: scrivi il numero o riprova` : "Non riconosco la carta: avvicinala o scrivi il numero", "");
-    beep(false); return;
+    if (!n0 && plain(info.name).length < 3) { setScanStatus("Non riconosco la carta: avvicinala o scrivi il numero", ""); beep(false); return; }
+    openCustom({ name: info.family === "west" ? nameGuess(info.name) : "", number: n0 ? String(n0.n) : "", total: n0 ? n0.t : "", lang: info.lang }, { lang: info.lang, guess: !info.sure, photo, still });
+    return;
   }
   // Ordine: nome più somigliante, poi l'espansione appena scansionata.
   const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
@@ -1354,12 +1593,27 @@ async function recognize(still, cands) {
   const nameRead = plain(info.name).length >= 3;
   const clear = scored.length === 1 ? (!nameRead || top.s >= 0.34)
     : (top.s >= 0.6 && (!second || top.s - second.s >= 0.2)) || (!nameRead && top.same && scored.filter(x => x.same).length === 1);
-  const ctx = { lang: info.lang, guess: !info.sure, photo };
+  const ctx = { lang: info.lang, guess: !info.sure, photo, still };
   if (scan.auto && clear) { await addFromScan(top.b, lang, ctx); return; }
   scan.pending = { label, lang, items: scored.slice(0, 12).map(x => x.b), ctx };
   setScanStatus(`${scored.length > 1 ? scored.length + " carte possibili" : "Controlla la carta"} ${label}: tocca quella giusta`, "");
   beep(true);
   renderScanPanels();
+}
+// Carte fuori catalogo già in collezione con lo stesso numero (per aggiungere una seconda copia).
+function customMatches(cands) {
+  return Object.values(state.cards).filter(k => k.custom && cands.slice(0, 3).some(c => sameLocal(k.localId, String(c.n)) && (!c.t || !k.official || k.official === c.t)))
+    .map(k => ({ id: k.id, localId: k.localId, name: k.name, image: "", setId: k.setId, setName: k.setName, official: k.official, lang: k.lang }));
+}
+// Dal nome letto tolgo le parole della fase (Base, Fase 1, Basic…) e tengo la parola più lunga.
+const STAGE_WORDS = /^(base|basic|fase|stage|stade|phase|stufe|basis|fase|etapa|estágio|evolution|evoluzione|level|livello)$/i;
+const nameGuess = t => (String(t).match(/[A-Za-zÀ-ÿ'.-]{3,}/g) || []).filter(w => !STAGE_WORDS.test(w)).sort((a, b) => b.length - a.length)[0] || "";
+function openCustom(custom, ctx) {
+  scan.pending = { custom, items: [], lang: custom.lang, ctx, label: "" };
+  setScanStatus("Non è nel catalogo: completa i dati e aggiungila con la foto", "");
+  beep(false);
+  renderScanPanels();
+  $(".custom-add")?.scrollIntoView({ block: "start", behavior: "smooth" });
 }
 async function acceptNumber(p) {
   // Numero scritto a mano o lettura simulata: niente foto, lingua dell'ultima carta riconosciuta.
@@ -1371,7 +1625,8 @@ async function acceptNumber(p) {
   if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
   if (lastSet) items = [...items.filter(b => b.setId === lastSet), ...items.filter(b => b.setId !== lastSet)];
-  if (!items.length) { setScanStatus(`Nessuna carta ${numLabel(p)} in ${edName(lang).toLowerCase()}`, ""); beep(false); return; }
+  if (!items.length) { const known = customMatches([{ n: p.number, t: p.total }]); if (known.length) items = known; }
+  if (!items.length) { openCustom({ name: "", number: String(p.number), total: p.total || "", lang }, { lang, guess: false, photo: null }); return; }
   const ctx = { lang, guess: scan.lang === "auto" && !scan.lastLang, photo: null };
   const sameSetFirst = lastSet && items[0].setId === lastSet && items.filter(b => b.setId === lastSet).length === 1;
   if (scan.auto && (items.length === 1 || sameSetFirst)) { await addFromScan(items[0], res.lang, ctx); return; }
@@ -1384,14 +1639,17 @@ async function addFromScan(brief, lang, ctx = {}) {
   try {
     const card = await loadCard(brief.id, lang);
     const ed = ctx.lang && regionOf(ctx.lang) === regionOf(card.lang) ? ctx.lang : card.lang;
-    const variant = card.variants[scan.variant] ? scan.variant : (Object.keys(card.variants).find(k => card.variants[k]) || "normal");
+    // Variante scelta da te per la pila, oppure riconosciuta (sicura solo se il catalogo ne ha una sola).
+    let variant, vSure = true;
+    if (scan.variant !== "auto" && card.variants[scan.variant]) variant = scan.variant;
+    else { const g = await guessVariant(card, ctx.still); variant = g.variant; vSure = g.sure; }
     const already = state.copies.filter(c => cardOf(c)?.id === card.id && c.lang === ed).length;
     const copy = { id: uid(), added: Date.now(), cardKey: card.key, lang: ed, variant, cond: scan.cond, graded: false, grader: null, grade: null,
                    purchase: null, personal: null, location: "", notes: "" };
     if (ctx.photo && await Photos.put(copy.id, ctx.photo)) copy.photo = true;
     state.copies.push(copy);
     scan.session.unshift(copy);
-    scan.info.set(copy.id, { already, guess: !!ctx.guess });
+    scan.info.set(copy.id, { already, guess: !!ctx.guess, vguess: !vSure });
     scan.fresh = copy.id;
     scan.pending = null;
     recordSnapshot();
@@ -1425,7 +1683,7 @@ function renderScan(banner) {
   setHeader("Scansiona", false);
   scan.lang ||= state.settings.scanLang || "auto";
   scan.cond ||= state.settings.cond;
-  const variantOptions = [["normal", "Normale"], ["reverse", "Reverse"], ["holo", "Holo"], ["firstEdition", "1ª ed."]];
+  const variantOptions = [["auto", "Auto"], ["normal", "Normale"], ["reverse", "Reverse"], ["holo", "Holo"], ["firstEdition", "1ª ed."]];
   const demoCam = isPreview && !online;
   main.innerHTML = banner + `
     ${demoCam ? `
@@ -1460,9 +1718,9 @@ function renderScan(banner) {
         <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang"><option value="auto" ${scan.lang === "auto" ? "selected" : ""}>Automatica (riconosce la lingua)</option>${langOptions(scan.lang)}</select></div>
         <div class="field"><label for="scan-cond">Condizione</label><select id="scan-cond">${CONDITIONS.map(([k, n]) => `<option value="${k}" ${k === scan.cond ? "selected" : ""}>${n}</option>`).join("")}</select></div>
       </div>
-      <div class="field"><div class="label"><span>Variante</span><span>separa prima le pile</span></div>${seg("scan-variant", variantOptions, scan.variant)}</div>
+      <div class="field"><div class="label"><span>Variante</span><span>Auto: la riconosce l'app</span></div>${seg("scan-variant", variantOptions, scan.variant)}</div>
       ${scan.lockSet ? `<div class="check" style="justify-content:space-between"><span>Solo carte di <b>${esc(scan.lockSet.name)}</b></span><button class="btn small ghost" data-action="unlock-set">Togli</button></div>` : ""}
-      <form class="searchbar" id="manual-form"><input id="manual" placeholder="Oppure scrivi il numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" inputmode="numeric"><button class="btn primary" type="submit">Aggiungi</button></form>
+      <form class="searchbar" id="manual-form"><input id="manual" placeholder="Oppure scrivi il numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" type="submit">Aggiungi</button></form>
     </section>
     <div id="scan-panels"></div>`;
   $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); scan.votes.clear(); scanLangs().forEach(l => setIndex(l)); Store.save(); };
@@ -1482,7 +1740,7 @@ function renderScan(banner) {
     scan.busy = true;
     try {
       const bmp = await createImageBitmap(f);
-      await captureFrom(bmp, photoRects(bmp.width, bmp.height));
+      await captureFrom(bmp, photoRects(bmp.width, bmp.height), true);
     } catch (err) { setScanStatus((err.message || "Lettura non riuscita") + ": scrivi il numero qui sotto", ""); }
     finally { scan.busy = false; }
   };
@@ -1491,13 +1749,49 @@ function renderScan(banner) {
   scanLangs().forEach(l => setIndex(l));
   if (!scan.cameraOff && !demoCam) { loadOCR().catch(() => {}); startScanner(); }
 }
+// Modulo per una carta che il catalogo non ha: nome, numero, edizione, espansione; la foto è quella appena scattata.
+function customPanel(pend) {
+  const c = pend.custom;
+  if (pend.ctx?.photo && !pend.preview) pend.preview = URL.createObjectURL(pend.ctx.photo);
+  return `<section class="panel form custom-add" aria-label="Carta fuori catalogo">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Non è nel catalogo: aggiungila lo stesso</b><button class="btn small ghost" data-action="skip-pending">Salta</button></div>
+    <p class="note">Il catalogo TCGdex non ha questa carta (succede spesso con le buste speciali cinesi e coreane). La archivio con ${pend.preview ? "la tua foto" : "i dati che scrivi"}; il valore lo inserisci tu dalla scheda della carta.</p>
+    <div class="custom-grid">${pend.preview ? `<img class="copy-photo big" src="${esc(pend.preview)}" alt="La foto appena scattata">` : ""}
+      <div class="grow" style="display:grid;gap:10px">
+        <div class="field"><label for="cu-name">Nome della carta</label><input id="cu-name" value="${esc(c.name)}" placeholder="es. Sawsbuck o 萌芽鹿" autocomplete="off"></div>
+        <div class="two">
+          <div class="field"><label for="cu-num">Numero</label><input id="cu-num" value="${esc(c.number ? c.number + (c.total ? "/" + String(c.total).padStart(2, "0") : "") : "")}" placeholder="es. 1807/07" autocomplete="off"></div>
+          <div class="field"><label for="cu-lang">Edizione</label><select id="cu-lang">${langOptions(c.lang)}</select></div>
+        </div>
+        <div class="field"><label for="cu-set">Espansione</label><select id="cu-set"><option value="altro">Carico le espansioni…</option></select></div>
+      </div></div>
+    <button class="btn gold" data-action="custom-add">${pend.preview ? "Aggiungi con la foto" : "Aggiungi alla collezione"}</button>
+  </section>`;
+}
+async function fillCustomSets(pend) {
+  const sel = $("#cu-set"), lang = $("#cu-lang")?.value; if (!sel || !lang) return;
+  const total = parseInt(pend.custom.total, 10) || parseNumber($("#cu-num").value)?.total || null;
+  const sets = Object.values(await setIndex(lang)).reverse();
+  if ($("#cu-lang")?.value !== lang) return;
+  const same = total ? sets.filter(x => x.cardCount?.official === total) : [];
+  const rest = sets.filter(x => !same.includes(x));
+  const opt = x => `<option value="${esc(x.id)}">${esc(x.name)} · ${esc(x.id)}</option>`;
+  sel.innerHTML = (same.length ? `<optgroup label="Con ${total} carte (come la tua)">${same.map(opt).join("")}</optgroup>` : "")
+    + `<option value="altro">Altra espansione / non so</option>` + (rest.length ? `<optgroup label="Tutte le espansioni">${rest.map(opt).join("")}</optgroup>` : "");
+  if (same.length) sel.value = same[0].id;
+}
+function bindCustom(pend) {
+  fillCustomSets(pend);
+  $("#cu-lang").onchange = () => fillCustomSets(pend);
+  $("#cu-num").onchange = () => { const p = parseNumber($("#cu-num").value); if (p?.total) { pend.custom.total = p.total; fillCustomSets(pend); } };
+}
 function renderScanPanels() {
   const root = $("#scan-panels");
   if (!root) return;
   const pend = scan.pending;
   const sess = scan.session.filter(c => state.copies.includes(c));
   root.innerHTML = `
-    ${pend ? `<section class="panel picker" aria-label="Scegli la carta">
+    ${pend?.custom ? customPanel(pend) : pend ? `<section class="panel picker" aria-label="Scegli la carta">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Quale carta ${esc(pend.label)}?</b><button class="btn small ghost" data-action="skip-pending">Salta</button></div>
       <div class="options">${pend.items.map(b => `<button class="pocket" data-action="pick" data-id="${esc(b.id)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label">${esc(b.setName)}</span></button>`).join("")}</div>
     </section>` : ""}
@@ -1508,7 +1802,7 @@ function renderScanPanels() {
       return `<div class="tray-item ${scan.fresh === c.id ? "new" : ""}">
         <button class="thumb pocket" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}" aria-label="Apri ${esc(card.name)}">${c.photo ? `<div class="art"><img class="photo" data-photo="${esc(c.id)}" alt="La tua foto"></div>` : art(card)}</button>
         <div class="grow"><div class="name">${esc(card.name)}</div><div class="sub"><span class="num">${esc(cardNumber(card.localId, card.official))}</span> · ${esc(card.setName)}</div>
-          <div class="chips"><select class="ed-pick" data-copy-ed="${esc(c.id)}" aria-label="Edizione di ${esc(card.name)}" ${edStyle(c.lang)}>${LANGS.filter(l => l.region === regionOf(card.lang)).map(l => `<option value="${l.code}" ${l.code === c.lang ? "selected" : ""}>${l.short}</option>`).join("")}</select>${inf.guess ? `<span class="chip warn">edizione da controllare</span>` : ""}<span class="chip">${esc(c.cond)}</span>${inf.already ? `<span class="chip dup">ne avevi ${inf.already}</span>` : ""}<span class="euro" style="font-size:13px">${euro(copyValue(c))}</span></div></div>
+          <div class="chips"><select class="ed-pick" data-copy-ed="${esc(c.id)}" aria-label="Edizione di ${esc(card.name)}" ${edStyle(c.lang)}>${LANGS.filter(l => l.region === regionOf(card.lang)).map(l => `<option value="${l.code}" ${l.code === c.lang ? "selected" : ""}>${l.short}</option>`).join("")}</select>${inf.guess ? `<span class="chip warn">edizione da controllare</span>` : ""}${inf.vguess ? `<span class="chip warn">variante da controllare</span>` : ""}<span class="chip">${esc(c.cond)}</span>${inf.already ? `<span class="chip dup">ne avevi ${inf.already}</span>` : ""}<span class="euro" style="font-size:13px">${euro(copyValue(c))}</span></div></div>
         <div class="tray-actions">
           <button class="btn small" data-action="cycle-variant" data-copy="${esc(c.id)}" aria-label="Variante ${esc(VARIANTS[c.variant])}, tocca per cambiarla">${esc(VARIANTS[c.variant])}</button>
           <button class="btn small danger" data-action="remove-copy" data-copy="${esc(c.id)}" aria-label="Togli ${esc(card.name)}">✕</button>
@@ -1516,6 +1810,7 @@ function renderScanPanels() {
     }).join("")}</section>
     <button class="btn ghost" data-action="backup">Salva la copia di sicurezza (con le foto)</button>` : `<p class="note">Le carte aggiunte compaiono qui con la tua foto: tocca la variante o l'edizione per cambiarle, ✕ per toglierle.</p>`}`;
   scan.fresh = null;
+  if (pend?.custom) bindCustom(pend);
   root.querySelectorAll("[data-copy-ed]").forEach(sel => sel.onchange = async e => {
     const c = state.copies.find(x => x.id === e.target.dataset.copyEd); if (!c) return;
     const card = cardOf(c), ed = e.target.value;
@@ -1596,6 +1891,13 @@ function openSettings() {
       <p class="note">La copia contiene tutte le carte, le impostazioni e le foto. Salvala in File › iCloud Drive o OneDrive dopo ogni sessione di scansione: se l'iPhone si rompe o togli l'app, la ripristini da lì. Ultima copia: <b>${lastB}</b>${unsavedCount() ? ` · <b>${unsavedCount()}</b> carte aggiunte dopo` : ""}.</p>
       <div class="btn-row"><button class="btn gold" data-action="backup">Salva copia</button><label class="btn ghost" for="restore-input">Ripristina da copia</label><input id="restore-input" type="file" accept="application/json,.json" hidden></div>
     </section>
+    <h3 class="section-title">Collezioni di famiglia</h3>
+    <section class="panel form">
+      <p class="note">Per vedere le carte di un familiare (e lui le tue): chi condivide tocca <b>Condividi</b> nella Collezione e manda il file (WhatsApp, AirDrop o una cartella iCloud di famiglia). Chi lo riceve lo apre qui sotto. Per aggiornarla basta ricondividerla e riaprirla.</p>
+      <div class="field"><label for="owner-name">Il tuo nome (lo vede chi riceve la tua collezione)</label><input id="owner-name" value="${esc(state.settings.ownerName || "")}" placeholder="es. Daniele" autocomplete="off" maxlength="40"></div>
+      <div class="btn-row"><button class="btn gold" data-action="share-mine">Condividi la mia collezione</button><label class="btn ghost" for="family-input">Apri una collezione ricevuta</label><input id="family-input" type="file" accept="application/json,.json" hidden></div>
+      ${Family.list.length ? `<div>${Family.list.map(f => `<div class="row" style="padding-inline:0"><div class="grow"><b>${esc(f.name)}</b><span class="sub"> · ${f.copies} copie · ${euro(f.value)} · condivisa il ${esc(new Date(f.sharedAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" }))}</span></div><button class="btn small" data-action="family-open" data-fam="${esc(f.id)}">Apri</button><button class="btn small ghost danger" data-action="family-remove" data-fam="${esc(f.id)}">Togli</button></div>`).join("")}</div>` : ""}
+    </section>
     <h3 class="section-title">Versioni salvate sul telefono</h3>
     <section class="panel" id="hist-list"><p class="note" style="padding:12px">Carico…</p></section>
     <p class="note">L'app tiene da sola una versione della collezione ogni ora (le ultime 30). Servono per tornare indietro dopo un errore; restano sul telefono, quindi non sostituiscono la copia su iCloud o OneDrive.</p>
@@ -1610,6 +1912,18 @@ function openSettings() {
       const v = parseFloat(String(e.target.value).replace(",", "."));
       if (!isNaN(v) && v > 0) { state.settings.coef[e.target.dataset.coef] = v; recordSnapshot(); toast("Coefficiente salvato"); }
     });
+    $("#owner-name").onchange = e => { state.settings.ownerName = e.target.value.trim().slice(0, 40); Store.save(); toast("Nome salvato"); };
+    $("#family-input").onchange = async e => {
+      const f = e.target.files?.[0]; if (!f) return;
+      e.target.value = "";
+      try {
+        if (f.size > 400e6) throw new Error();
+        toast("Apro la collezione…");
+        const fam = await Family.import(JSON.parse(await f.text()), f.name);
+        toast(`Collezione di ${fam.name}: ${fam.copies} copie`);
+        await viewCollection(fam.id);
+      } catch { toast("Questo file non è una collezione valida"); }
+    };
     History.list().then(list => {
       const box = $("#hist-list"); if (!box) return;
       box.innerHTML = list.length ? list.map(h => `<div class="row"><div class="grow"><b>${esc(new Date(h.at).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</b><span class="sub"> · ${h.copies} copie</span></div><button class="btn small ghost" data-action="restore-hist" data-key="${esc(h.key)}">Ripristina</button></div>`).join("")
@@ -1749,9 +2063,9 @@ function drawSheet() {
     const cmLink = `https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`;
     body = `
       <div class="card-hero">
-        <div class="showcase ${isFoil(c) ? "foil" : ""}">${art(c, true)}</div>
+        <div class="showcase ${isFoil(c) ? "foil" : ""}">${!c.image && mine.find(cp => cp.photo) ? `<div class="art"><img class="photo" data-photo="${esc(mine.find(cp => cp.photo).id)}" alt="La tua foto"></div>` : art(c, true)}</div>
         <div style="display:grid;gap:10px;min-width:0">
-          <div><div class="sub">Valore di mercato</div><div class="price-big">${euro(headline)}</div>${c.example ? `<span class="chip example">prezzo di esempio</span>` : ""}</div>
+          <div><div class="sub">Valore di mercato</div><div class="price-big">${euro(headline)}</div>${c.example ? `<span class="chip example">prezzo di esempio</span>` : ""}${c.custom ? `<span class="chip warn">fuori catalogo: inserisci tu il valore</span>` : ""}</div>
           <dl class="kv">
             <dt>Espansione</dt><dd>${esc(c.setName)}</dd>
             <dt>Numero</dt><dd class="num">${esc(cardNumber(c.localId, c.official))}</dd>
@@ -1771,7 +2085,7 @@ function drawSheet() {
       <p class="note">Fonte: Cardmarket via TCGdex${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
       <h3 class="section-title">Le tue copie <small>${mine.length}</small></h3>
       ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}">${cp.photo ? `<img class="copy-photo" data-photo="${esc(cp.id)}" alt="La tua foto">` : ""}<div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
-      ${sheet.form ? copyForm(c) : quickAdd(c)}`;
+      ${viewing ? "" : sheet.form ? copyForm(c) : quickAdd(c)}`;
   }
   root.innerHTML = `<div class="sheet-wrap" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(c?.name || "Carta")}">
     <div class="grab"></div>
@@ -1876,6 +2190,7 @@ document.addEventListener("click", async e => {
     else if (id === "welcome-ed") { state.settings.lang = v; Store.save(); document.querySelectorAll('[data-seg="welcome-ed"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
     else if (id === "binder-filter") { ui.setView.filter = v; render(); }
     else if (id === "binder-img") { ui.setView.img = v; render(); }
+    else if (id === "coll-switch") viewCollection(v);
     else if (id === "browse-ed") { ui.browse.ed = v; render(); }
     else if (id === "search-ed") { ui.search.lang = v; if (ui.search.q) doSearch(); else render(); }
     else if (id === "scan-variant") { scan.variant = v; document.querySelectorAll('[data-seg="scan-variant"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
@@ -1885,6 +2200,7 @@ document.addEventListener("click", async e => {
   const el = e.target.closest("[data-action],[data-tab]");
   if (!el) return;
   const a = el.dataset.action;
+  if (viewing && READ_ONLY_ACTIONS.has(a)) { toast(`Questa è la collezione di ${viewing.name}: qui puoi solo guardare`); return; }
   if (!a && el.dataset.tab) { ui.tab = el.dataset.tab; ui.setView = null; ui.browse = null; window.scrollTo(0, 0); render(); return; }
   switch (a) {
     case "browse": ui.browse = { ed: state.settings.lang && ["it","en","ja","ko","zh-cn","zh-tw"].includes(state.settings.lang) ? state.settings.lang : "it", serie: null }; render(); break;
@@ -1908,14 +2224,29 @@ document.addEventListener("click", async e => {
     case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta: leggo il numero", ""); break;
     case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Auto: ${scan.auto ? "sì" : "no"}`; break;
     case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const { lang: l, ctx } = scan.pending; scan.pending = null; await addFromScan(b, l, ctx); break; }
-    case "skip-pending": scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
+    case "skip-pending": if (scan.pending?.preview) URL.revokeObjectURL(scan.pending.preview); scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
     case "cycle-variant": {
       const c = state.copies.find(x => x.id === el.dataset.copy), card = cardOf(c);
       const opts = Object.keys(card.variants).filter(k => card.variants[k]);
       c.variant = opts[(opts.indexOf(c.variant) + 1) % opts.length] || c.variant;
+      const inf = scan.info.get(c.id); if (inf) inf.vguess = false;
       recordSnapshot(); renderScanPanels(); break;
     }
     case "remove-copy": removeCopy(el.dataset.copy); break;
+    case "custom-add": {
+      const pend = scan.pending; if (!pend?.custom) break;
+      const name = $("#cu-name").value.trim(), lang = $("#cu-lang").value, setId = $("#cu-set").value, numTxt = $("#cu-num").value.trim();
+      if (!name) { toast("Scrivi il nome della carta"); $("#cu-name").focus(); break; }
+      const p = parseNumber(numTxt) || { number: numTxt.replace(/\s+/g, "") || "?", total: null };
+      const set = setId !== "altro" ? (await setIndex(lang))[setId] : null;
+      const card = makeCustomCard({ name, number: p.number, total: p.total || set?.cardCount?.official || 0, lang, setId: set ? setId : "altro", setName: set?.name || "Altre carte" });
+      if (set) ensureSet(setId, lang).catch(() => {});
+      if (pend.preview) URL.revokeObjectURL(pend.preview);
+      scan.pending = null;
+      if (regionOf(lang) === regionOf(pend.ctx?.lang || lang)) scan.lastLang = lang;
+      await addFromScan({ id: card.id }, lang, { ...pend.ctx, lang, guess: false });
+      break;
+    }
     case "remove-photo": {
       readForm(); const f = sheet.form;
       if (f.id) { Photos.del(f.id); const cp = state.copies.find(x => x.id === f.id); if (cp) delete cp.photo; f.photo = false; Store.save(); }
@@ -1945,6 +2276,21 @@ document.addEventListener("click", async e => {
       break;
     }
     case "open-settings": openSettings(); break;
+    case "family-exit": viewCollection(null); break;
+    case "share-mine": {
+      if (!state.settings.ownerName) { toast("Scrivi prima il tuo nome in Impostazioni › Collezioni di famiglia"); openSettings(); break; }
+      el.disabled = true;
+      try {
+        const name = state.settings.ownerName.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "collezione";
+        if (await shareFile(`collezione-${name}-${today()}.json`, await backupJSON(true), "application/json")) toast("Collezione condivisa: chi la riceve la apre da Impostazioni › Collezioni di famiglia");
+      } finally { el.disabled = false; }
+      break;
+    }
+    case "family-open": viewCollection(el.dataset.fam); break;
+    case "family-remove": {
+      if (el.dataset.confirm !== "1") { el.dataset.confirm = "1"; el.textContent = "Tocca di nuovo per togliere"; break; }
+      await Family.remove(el.dataset.fam); toast("Collezione tolta"); closeSheet(); openSettings(); break;
+    }
     case "restore-hist": {
       const v = await History.get(el.dataset.key);
       try {
@@ -1971,7 +2317,7 @@ document.addEventListener("click", async e => {
     case "csv-all": shareFile("collezione.csv", csv(state.copies), "text/csv"); break;
   }
 });
-$("#settings-btn").onclick = () => openSettings();
+$("#settings-btn").onclick = async () => { if (viewing) await viewCollection(null); openSettings(); };
 $("#back").onclick = () => {
   if (ui.setView) ui.setView = null;
   else if (ui.browse?.serie) ui.browse.serie = null;
@@ -2051,6 +2397,7 @@ async function seedDemo() {
 (async function start() {
   render();
   const saved = await Store.load();
+  await Family.load();
   if (saved) {
     // Anche l'archivio del telefono passa dal controllo. Se qualcosa non torna, l'originale resta da parte e non va perso.
     try {

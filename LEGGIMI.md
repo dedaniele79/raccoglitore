@@ -1,6 +1,6 @@
 # Raccoglitore TCG – web app per iPhone
 
-Versione 1.4 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
+Versione 1.5 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
 
 Web app per archiviare la collezione di carte Pokémon. Si apre da Safari e si aggiunge alla schermata Home: si comporta come un'app, non scade e non va reinstallata. Gli aggiornamenti arrivano da soli quando carichi i nuovi file su GitHub sopra i vecchi.
 
@@ -12,6 +12,8 @@ Web app per archiviare la collezione di carte Pokémon. Si apre da Safari e si a
 - **Valore**: trend Cardmarket in euro (via TCGdex), aggiornato da solo una volta al giorno, con coefficiente per lingua e valore personale per copia.
 - **Scambi**: una copia per carta, edizione e variante resta in collezione; le altre sono doppioni, esportabili in CSV.
 - **Cerca**: per nome, in 12 lingue.
+- **Collezioni di famiglia** (1.5): ognuno condivide la sua collezione come file e vede quelle degli altri, in sola lettura.
+- **Carte fuori catalogo** (1.5): le carte che TCGdex non ha (per esempio molte buste speciali cinesi) si archiviano lo stesso con foto, nome, numero ed espansione.
 - **Copia di sicurezza**: salva e ripristina in un file tutte le carte, le impostazioni e le foto; promemoria dopo ogni sessione; versioni automatiche sul telefono (una all'ora, le ultime 30).
 
 ## Metterla online con GitHub Pages (gratis, una volta sola)

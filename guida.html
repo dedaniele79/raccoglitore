@@ -74,7 +74,7 @@ a { color: var(--accent); }
 
 <div class="wrap">
   <header class="hero"><div class="hero-inner">
-    <div class="eyebrow">Guida all'uso · versione 1.4 · aggiornata il 31 ottobre 2026</div>
+    <div class="eyebrow">Guida all'uso · versione 1.5 · aggiornata il 31 ottobre 2026</div>
     <h1>Raccoglitore TCG</h1>
     <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
     <a class="cta" href="./">Apri l'app</a>
@@ -91,6 +91,7 @@ a { color: var(--accent); }
       <li><a href="#scambi">Doppioni e scambi</a></li>
       <li><a href="#cerca">Cercare nel catalogo</a></li>
       <li><a href="#backup">Copia di sicurezza</a></li>
+      <li><a href="#famiglia">Collezioni di famiglia</a></li>
       <li><a href="#sicurezza">Sicurezza e privacy</a></li>
       <li><a href="#problemi">Problemi e domande</a></li>
       <li><a href="#novita">Novità</a></li>
@@ -130,16 +131,16 @@ a { color: var(--accent); }
     <p>La scansione archivia molte carte di fila senza toccare lo schermo. L'app legge il numero stampato in basso (per esempio <span class="num">025/165</span>), riconosce la lingua della carta, controlla il nome, la aggiunge alla collezione e ne salva la foto.</p>
     <h3>Prima di iniziare</h3>
     <ul class="points">
-      <li><b>Dividi le carte in pile</b>: normali, reverse, holo. La variante non si riconosce dalla foto, quindi la imposti una volta per pila.</li>
+      <li><b>Variante</b>: con <b>Auto</b> la riconosce l'app. Se il catalogo ha una sola versione della carta (per esempio le ex e le illustrazioni speciali) è sicura; altrimenti l'app confronta quanto luccicano testo e illustrazione e, se non è certa, segna la carta con <b>variante da controllare</b>. Se hai già diviso le pile (normali, reverse, holo) puoi sceglierla tu: è più sicuro.</li>
       <li>Lavora con una luce uniforme, senza riflessi sulla parte bassa della carta. Va bene anche un tavolo scuro.</li>
       <li>La prima volta serve la connessione: l'app scarica il lettore (circa 7 MB, e altri 4 MB alla prima carta asiatica).</li>
     </ul>
     <h3>Come si fa</h3>
     <ol class="steps">
       <li>Tocca il pulsante giallo <span class="k">Scansiona</span> al centro della barra in basso.</li>
-      <li>Lascia <b>Edizione: Automatica</b>. Scegli <b>Condizione</b> e <b>Variante</b> della pila.</li>
+      <li>Lascia <b>Edizione: Automatica</b> e <b>Variante: Auto</b>, scegli la <b>Condizione</b>.</li>
       <li>Tieni la carta dentro la cornice gialla, dritta e grande quanto la cornice, a 15–20 cm dal telefono.</li>
-      <li>Quando legge lo stesso numero due volte, l'app riconosce la carta: lingua dal testo (o dalla scrittura giapponese, coreana, cinese) e nome. Se è sicura, la aggiunge con la foto e la mostra in <b>Questa sessione</b>.</li>
+      <li>Quando legge lo stesso numero due volte, l'app riconosce la carta: lingua dal testo (o dalla scrittura giapponese, coreana, cinese) e nome. Se è sicura, la aggiunge con la foto e la mostra in <b>Questa sessione</b>. La foto viene ritagliata sui bordi della carta e raddrizzata, senza lo sfondo.</li>
       <li>Togli la carta e metti la successiva. Per una seconda copia uguale, togli la carta e rimettila.</li>
     </ol>
     <h3>Il pulsante bianco: scatta</h3>
@@ -153,6 +154,9 @@ a { color: var(--accent); }
     </ul>
     <h3>Quando ci sono più carte possibili</h3>
     <p>Compare il riquadro <b>Quale carta…?</b> con le immagini, ordinate per somiglianza del nome: tocca quella giusta. Succede anche quando il nome letto non coincide con quello del catalogo, per evitare aggiunte sbagliate.</p>
+    <h3>Carte che il catalogo non ha</h3>
+    <p>Il catalogo TCGdex non contiene tutte le carte: mancano per esempio molte buste speciali cinesi e coreane (come i <i>Gem Pack</i> cinesi, con numeri tipo <span class="num">1807/07</span>). In questi casi compare il riquadro <b>Non è nel catalogo: aggiungila lo stesso</b>, con la foto appena scattata: controlla nome, numero, edizione ed espansione e tocca <span class="k">Aggiungi con la foto</span>. La carta entra nella collezione e nel raccoglitore della sua espansione; il valore lo inserisci tu dalla scheda della carta. La volta dopo che scansioni la stessa carta, l'app la riconosce tra le tue.</p>
+    <div class="tip"><b>Carte cinesi e coreane</b>Su queste carte la lingua si riconosce meno bene: prima di scansionarle scegli l'edizione (per esempio <i>Cinese semplificato</i>) al posto di <i>Automatica</i>.</div>
     <h3>Scansionare una sola espansione</h3>
     <p>Apri l'espansione dalla collezione e tocca <span class="k">Scansiona carte di questa espansione</span>: ogni numero porta a una sola carta.</p>
     <h3>Correggere</h3>
@@ -162,7 +166,7 @@ a { color: var(--accent); }
       <li><span class="k">Pausa</span> ferma la lettura; <span class="k">Auto: no</span> ti fa confermare ogni carta.</li>
     </ul>
     <h3>Senza fotocamera</h3>
-    <p>Scrivi il numero nel campo <i>Oppure scrivi il numero</i> (per esempio <span class="num">25/165</span>) e tocca <span class="k">Aggiungi</span>.</p>
+    <p>Scrivi il numero nel campo <i>Oppure scrivi il numero</i> (per esempio <span class="num">25/165</span>; vanno bene anche <span class="num">25 165</span> o <span class="num">25.165</span>) e tocca <span class="k">Aggiungi</span>.</p>
     <div class="tip"><b>Alla fine della sessione</b>Tocca <span class="k">Salva la copia di sicurezza</span> sotto la lista: le carte e le foto finiscono su iCloud o OneDrive.</div>
   </section>
 
@@ -232,8 +236,25 @@ a { color: var(--accent); }
     <p>L'app salva da sola una versione della collezione ogni ora e tiene le ultime 30. In <span class="k">⚙︎ Impostazioni</span> › <b>Versioni salvate sul telefono</b> puoi tornare a una di queste, per esempio dopo un errore. Restano sul telefono, quindi non sostituiscono la copia su iCloud o OneDrive.</p>
   </section>
 
+  <section class="chap" id="famiglia">
+    <h2><span class="n">10</span>Collezioni di famiglia</h2>
+    <p>Ognuno scansiona le sue carte sul proprio iPhone, e potete vedere le collezioni degli altri. Funziona con un file: niente account, i dati restano tra voi.</p>
+    <h3>Chi condivide (per esempio tuo figlio)</h3>
+    <ol class="steps">
+      <li>La prima volta: <span class="k">⚙︎ Impostazioni</span> › <b>Collezioni di famiglia</b> › scrivi il tuo nome.</li>
+      <li>Nella Collezione tocca <span class="k">Condividi</span> e manda il file: WhatsApp, AirDrop o una cartella iCloud condivisa in famiglia.</li>
+    </ol>
+    <h3>Chi riceve</h3>
+    <ol class="steps">
+      <li>Salva il file ricevuto in File (in WhatsApp: tieni premuto il file › Condividi › Salva in File).</li>
+      <li><span class="k">⚙︎ Impostazioni</span> › <b>Collezioni di famiglia</b> › <span class="k">Apri una collezione ricevuta</span> e scegli il file.</li>
+      <li>In cima alla Collezione compaiono le pillole <b>La mia · Marco</b>: tocca il nome per guardare la sua collezione con foto, valore, raccoglitori e doppioni (utili per gli scambi). <span class="k">Torna alla tua</span> per tornare alla tua.</li>
+    </ol>
+    <p>La collezione di un familiare si può solo guardare: le modifiche si fanno sul suo telefono. Per vederla aggiornata, lui la ricondivide e tu riapri il file: l'app sostituisce quella vecchia. Da <b>Collezioni di famiglia</b> puoi anche toglierla.</p>
+  </section>
+
   <section class="chap" id="sicurezza">
-    <h2><span class="n">10</span>Sicurezza e privacy</h2>
+    <h2><span class="n">11</span>Sicurezza e privacy</h2>
     <p>Raccoglitore non ha account, password né un server suo. Tutto quello che inserisci resta sull'iPhone.</p>
     <div class="tablebox"><table>
       <thead><tr><th>Cosa</th><th>Dove va</th></tr></thead>
@@ -260,9 +281,10 @@ a { color: var(--accent); }
   </section>
 
   <section class="chap" id="problemi">
-    <h2><span class="n">11</span>Problemi e domande</h2>
+    <h2><span class="n">12</span>Problemi e domande</h2>
     <details><summary>La fotocamera non si apre</summary><p>Apri Impostazioni dell'iPhone › Safari › Fotocamera e scegli “Chiedi” o “Consenti”. Se l'app è installata sulla Home, chiudila e riaprila.</p></details>
     <details><summary>La carta non viene riconosciuta</summary><p>Avvicina la carta finché riempie la cornice, tienila dritta, evita riflessi e luce radente sulla parte bassa. Se non basta, tocca il pulsante bianco per scattare: l'app prova anche con il nome. In alternativa scrivi il numero a mano.</p></details>
+    <details><summary>«Non è nel catalogo»</summary><p>Il catalogo TCGdex non ha quella carta (succede con molte buste speciali cinesi e coreane). Aggiungila dal riquadro con la foto: resta nella collezione come le altre, solo senza prezzo automatico.</p></details>
     <details><summary>La lingua è sbagliata</summary><p>Nella lista della sessione tocca la sigla dell'edizione e scegli quella giusta. Le carte a tutta immagine hanno poco testo: se ne scansioni molte di una lingua, scegli l'edizione al posto di <i>Automatica</i>.</p></details>
     <details><summary>“Nessuna carta con questo numero”</summary><p>Controlla l'edizione scelta: una carta giapponese va scansionata con edizione JP. Le espansioni appena uscite possono comparire nel catalogo qualche giorno dopo.</p></details>
     <details><summary>La carta aggiunta è sbagliata</summary><p>Tocca <span class="k">Annulla</span> subito dopo, oppure <span class="k">✕</span> nella lista della sessione. Per evitarlo, usa “Scansiona carte di questa espansione”.</p></details>
@@ -272,10 +294,11 @@ a { color: var(--accent); }
   </section>
 
   <section class="chap" id="novita">
-    <h2><span class="n">12</span>Novità</h2>
+    <h2><span class="n">13</span>Novità</h2>
     <div class="tablebox"><table>
       <thead><tr><th>Versione</th><th>Data</th><th>Cosa cambia</th></tr></thead>
       <tbody>
+        <tr><td>1.5</td><td>31/10/2026</td><td>Collezioni di famiglia: condividi la tua collezione con un file e guarda quella dei familiari (con foto, valore, doppioni). Carte fuori catalogo: si aggiungono lo stesso con foto, nome, numero ed espansione. Variante riconosciuta in automatico (Auto). Foto ritagliate sui bordi della carta e raddrizzate. Numeri a quattro cifre (es. 1807/07 dei Gem Pack cinesi) e numero a mano con la tastiera completa.</td></tr>
         <tr><td>1.4</td><td>31/10/2026</td><td>Riconoscimento rifatto: cornice allineata alla fotocamera, lettura del numero anche su fondi colorati e testo bianco, lingua riconosciuta dalla carta (occidentali, giapponese, coreano, cinese), controllo del nome, pulsante per scattare. Foto di ogni carta in archivio (anche nel raccoglitore). Copia di sicurezza con le foto, promemoria dopo ogni sessione, versioni automatiche sul telefono.</td></tr>
         <tr><td>1.3</td><td>31/10/2026</td><td>Sicurezza: controllo delle copie di sicurezza con annullamento del ripristino, protezione CSP, lettore del numero e caratteri ospitati nell'app (niente codice da altri siti, niente Google Fonts), CSV protetti dalle formule, limite allo spazio usato dalle immagini.</td></tr>
         <tr><td>1.2</td><td>31/10/2026</td><td>Benvenuto al primo avvio, pulsanti Guida e Impostazioni, ricerca nella collezione, ordinamento delle espansioni, aggiunta con un tocco (+1) dalla scheda carta, promemoria per installazione e copia di sicurezza.</td></tr>
