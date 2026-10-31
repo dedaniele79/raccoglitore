@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-SETnNpC2s5dYNyNDDmEKaRXw8baDP+ox4DjMvRR6O1c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self'; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-LyeiSU7fmGUUriUeZ9otQDbwT/iOrFCxnqR/NG43I5o=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -227,7 +227,7 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .searchbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 
 /* Scansione */
-.scanner { position: relative; border-radius: 22px; overflow: hidden; background: #05060f; aspect-ratio: 3 / 4; max-height: 52vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow); }
+.scanner { box-sizing: border-box; position: relative; border-radius: 22px; overflow: hidden; background: #05060f; aspect-ratio: 3 / 4; max-height: 52vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow); }
 .scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .scanner .frame { position: absolute; left: 50%; top: 50%; width: 66%; aspect-ratio: 245 / 337; transform: translate(-50%, -50%); border-radius: 14px; box-shadow: 0 0 0 999px rgba(5, 6, 15, .45); }
 .scanner .frame::before { content: ""; position: absolute; inset: 0; border-radius: 14px; border: 3px solid var(--frame); }
@@ -247,6 +247,18 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .session-bar .field > .label { display: flex; justify-content: space-between; gap: 8px; }
 .picker { padding: 14px; display: grid; gap: 10px; box-shadow: var(--shadow), inset 0 0 0 2px var(--gold); }
 .picker .options { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.scanner .controls { align-items: center; }
+.shutter { flex: none; width: 58px; height: 58px; border-radius: 50%; border: 4px solid #fff; background: rgba(255,255,255,.18); padding: 0; cursor: pointer; display: grid; place-items: center; }
+.shutter span { width: 42px; height: 42px; border-radius: 50%; background: #fff; transition: transform .12s; }
+.shutter:active span { transform: scale(.86); }
+.scan-hint { margin: -4px 4px 0; }
+.photo { object-fit: cover; }
+.art img.photo { object-fit: cover; }
+.copy-photo { width: 40px; height: 55px; flex: none; border-radius: 6px; object-fit: cover; background: var(--sunk); box-shadow: 0 0 0 1px var(--line); }
+.copy-photo.big { width: 96px; height: 132px; border-radius: 9px; }
+.photo-edit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ed-pick { font: inherit; font-size: 12px; font-weight: 800; border: 0; border-radius: 999px; padding: 3px 8px; background: color-mix(in srgb, var(--rc) 16%, transparent); color: var(--rc); appearance: none; -webkit-appearance: none; min-height: 24px; }
+.chip.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
 .tray-item { display: flex; gap: 12px; align-items: center; padding: 10px 12px; min-width: 0; }
 .tray-item + .tray-item { border-top: 1px solid var(--line); }
 .tray-item .thumb { width: 46px; flex: none; }
@@ -328,7 +340,7 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.3";
+const APP_VERSION = "1.4";
 const APP_DATE = "31 ottobre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
@@ -388,12 +400,81 @@ const Store = {
     this.timer = setTimeout(() => {
       const data = JSON.parse(JSON.stringify(state));
       try {
-        if (this.db) this.db.transaction("kv", "readwrite").objectStore("kv").put(data, "state");
+        if (this.db) { this.db.transaction("kv", "readwrite").objectStore("kv").put(data, "state"); History.maybeSave(data); }
         else localStorage.setItem("raccoglitore-tcg", JSON.stringify(data));
       } catch (e) { console.warn("Salvataggio non riuscito", e); }
     }, 250);
   }
 };
+
+// ================================================================ Foto delle tue copie e storico automatico (nello stesso archivio del telefono)
+const idbReq = (mode, fn) => new Promise(res => {
+  try { const tx = Store.db.transaction("kv", mode), r = fn(tx.objectStore("kv")); tx.oncomplete = () => res(r?.result ?? true); tx.onerror = tx.onabort = () => res(null); }
+  catch { res(null); }
+});
+const Photos = {
+  urls: new Map(),
+  key: id => "photo:" + id,
+  async put(id, blob) { if (!Store.db || !blob) return false; const ok = await idbReq("readwrite", s => s.put(blob, this.key(id))); this.drop(id); return !!ok; },
+  get(id) { return Store.db ? idbReq("readonly", s => s.get(this.key(id))) : Promise.resolve(null); },
+  drop(id) { const u = this.urls.get(id); if (u) { URL.revokeObjectURL(u); this.urls.delete(id); } },
+  del(id) { this.drop(id); if (Store.db) idbReq("readwrite", s => s.delete(this.key(id))); },
+  async url(id) {
+    if (this.urls.has(id)) return this.urls.get(id);
+    const b = await this.get(id); if (!(b instanceof Blob)) return null;
+    const u = URL.createObjectURL(b); this.urls.set(id, u); return u;
+  }
+};
+// Le foto si caricano dopo il disegno: ogni <img data-photo="id"> riceve la sua immagine.
+async function hydratePhotos() {
+  for (const img of document.querySelectorAll("img[data-photo]:not([src]):not([data-loading])")) {
+    img.dataset.loading = "1";
+    const u = await Photos.url(img.dataset.photo);
+    if (u) img.src = u; else img.closest(".photo-slot")?.classList.add("empty"), img.remove();
+  }
+}
+new MutationObserver(() => hydratePhotos()).observe(document.body, { childList: true, subtree: true });
+const blobToDataURL = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); });
+const dataURLToBlob = u => { const [head, b64] = u.split(","), bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return new Blob([a], { type: head.slice(5).split(";")[0] }); };
+// Riduce una foto scelta o scattata a 900 pixel sul lato lungo.
+async function shrinkPhoto(file, max = 900) {
+  const bmp = await createImageBitmap(file), k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(res, "image/jpeg", 0.82));
+}
+// Storico: una versione della collezione all'ora, le ultime 30, dentro il telefono. Protegge da errori e ripristini sbagliati.
+const History = {
+  last: 0,
+  async maybeSave(data) {
+    if (!Store.db || !data.copies?.length || Date.now() - this.last < 3600e3) return;
+    this.last = Date.now();
+    await idbReq("readwrite", s => s.put({ at: Date.now(), copies: data.copies.length, data }, "hist:" + Date.now()));
+    const keys = (await this.keys()).sort();
+    for (const k of keys.slice(0, Math.max(0, keys.length - 30))) idbReq("readwrite", s => s.delete(k));
+  },
+  async keys() { const k = await idbReq("readonly", s => s.getAllKeys()); return (k || []).filter(x => String(x).startsWith("hist:")); },
+  async list() { const out = []; for (const k of (await this.keys()).sort().reverse()) { const v = await idbReq("readonly", s => s.get(k)); if (v) out.push({ key: k, at: v.at, copies: v.copies }); } return out; },
+  get(k) { return idbReq("readonly", s => s.get(k)); }
+};
+// Copia di sicurezza completa: collezione, impostazioni e foto.
+async function backupJSON() {
+  const data = JSON.parse(JSON.stringify(state)), photos = {};
+  for (const c of state.copies) if (c.photo) { const b = await Photos.get(c.id); if (b instanceof Blob) photos[c.id] = await blobToDataURL(b); }
+  data.photos = photos;
+  data.app = { name: "Raccoglitore TCG", version: APP_VERSION, saved: new Date().toISOString() };
+  return JSON.stringify(data);
+}
+// Rimette le foto di una copia di sicurezza, solo per copie che esistono e solo immagini vere.
+async function restorePhotos(raw, copies) {
+  const ids = new Set(copies.map(c => c.id)); let n = 0;
+  if (isObj(raw.photos)) for (const [id, u] of Object.entries(raw.photos)) {
+    if (!ids.has(id) || typeof u !== "string" || u.length > 6e6 || !/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(u)) continue;
+    try { if (await Photos.put(id, dataURLToBlob(u))) n++; } catch {}
+  }
+  for (const c of copies) if (c.photo) c.photo = !!(await Photos.get(c.id));
+  return n;
+}
 
 // ================================================================ Controllo dei dati
 // Una copia di sicurezza è un file che arriva da fuori: la collezione viene ricostruita campo per campo,
@@ -453,6 +534,7 @@ function cleanCopy(c, cards, seen) {
     purchase: numIn(c.purchase, 0, 1e7), personal: numIn(c.personal, 0, 1e7), location: txt(c.location, 120), notes: txt(c.notes, 1000)
   };
   if (c.example === true) copy.example = true;
+  if (c.photo === true) copy.photo = true;
   return copy;
 }
 // Restituisce la collezione pulita e quante copie sono state scartate. Rifiuta ciò che non è una copia di sicurezza.
@@ -469,7 +551,7 @@ function sanitizeState(raw) {
   if (isObj(st.coef)) for (const [k, v] of Object.entries(st.coef)) { const n = numIn(v, 0.01, 10); if (langOk(k) && n != null) coef[k] = n; }
   const settings = { lang: langOk(st.lang) || "it", cond: COND_CODES.includes(st.cond) ? st.cond : "NM", coef,
     onboarded: st.onboarded === true, installDismissed: st.installDismissed === true };
-  if (langOk(st.scanLang)) settings.scanLang = st.scanLang;
+  if (langOk(st.scanLang) || st.scanLang === "auto") settings.scanLang = st.scanLang;
   const clean = { cards, sets, copies, snapshots, settings, lastRefresh: numIn(raw.lastRefresh, 0, 1e14) ?? 0 };
   const lb = numIn(raw.lastBackup, 0, 1e14); if (lb) clean.lastBackup = lb;
   return { state: clean, dropped: raw.copies.length - copies.length };
@@ -641,24 +723,33 @@ function setIndex(lang) {
 }
 const setIdOf = b => b.id.endsWith("-" + b.localId) ? b.id.slice(0, -(String(b.localId).length + 1)) : b.id.replace(/-[^-]*$/, "");
 const findCache = new Map();
+// Dal numero stampato alle carte: cerco tra le espansioni che hanno quel totale (il filtro per numero di TCGdex non è affidabile).
+const setData = l => id => api(l, `sets/${encodeURIComponent(id)}`);
+const sameLocal = (lid, printed) => {
+  const a = String(lid).toUpperCase(), b = String(printed).toUpperCase();
+  return /^\d+$/.test(a) && /^\d+$/.test(b) ? parseInt(a, 10) === parseInt(b, 10) : a === b || a.replace(/^0+/, "") === b.replace(/^0+/, "");
+};
 async function findByNumber(printed, lang) {
   const ck = `${lang}|${numLabel(printed)}`;
   if (findCache.has(ck)) return findCache.get(ck);
   const attempt = async l => {
-    const lists = await Promise.all(lookupForms(printed.number).map(f => api(l, "cards", { localId: "eq:" + f }).catch(() => [])));
-    const seen = new Map();
-    lists.flat().forEach(b => seen.set(b.id, { ...b, localId: String(b.localId) }));
-    let briefs = [...seen.values()];
     const idx = await setIndex(l);
-    if (printed.total) {
-      const same = briefs.filter(b => idx[setIdOf(b)]?.cardCount?.official === printed.total);
-      if (same.length) briefs = same;
+    let sets = Object.values(idx).reverse();
+    if (printed.total) sets = sets.filter(s => s.cardCount?.official === printed.total);
+    else if (scan.lockSet || scan.session[0]) { const want = scan.lockSet?.id || cardOf(scan.session[0])?.setId; sets = sets.filter(s => s.id === want); }
+    else sets = [];
+    if (scan.lockSet) sets.sort((x, y) => (y.id === scan.lockSet.id) - (x.id === scan.lockSet.id));
+    const items = [];
+    for (const s of sets.slice(0, 10)) {
+      let d; try { d = await setData(l)(s.id); } catch { continue; }
+      for (const c of d.cards || []) if (sameLocal(c.localId, printed.number))
+        items.push({ ...c, localId: String(c.localId), setId: s.id, setName: d.name || s.name, official: d.cardCount?.official || s.cardCount?.official || 0 });
     }
-    return { lang: l, items: briefs.slice(0, 30).map(b => ({ ...b, setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0 })) };
+    return { lang: l, items };
   };
   let res = await attempt(lang);
   if (!res.items.length && fallbackLang(lang) !== lang) res = await attempt(fallbackLang(lang));
-  findCache.set(ck, res);
+  if (res.items.length) findCache.set(ck, res);
   return res;
 }
 
@@ -806,15 +897,16 @@ function showMine() {
 }
 // Avvisi in cima alla collezione: installazione sull'iPhone e copia di sicurezza.
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const unsavedCount = () => state.copies.filter(c => c.added > (state.lastBackup || 0)).length;
 const isStandalone = () => window.navigator.standalone === true || window.matchMedia?.("(display-mode: standalone)").matches;
 function notices() {
   let html = "";
   if (!isPreview && isIOS && !isStandalone() && !state.settings.installDismissed) {
     html += `<div class="notice"><div class="grow"><b>Installa l'app sull'iPhone</b><span class="sub">In Safari tocca Condividi, poi “Aggiungi alla schermata Home”. Si aprirà a tutto schermo, come un'app.</span></div><button class="btn small ghost" data-action="dismiss-install">Ok</button></div>`;
   }
-  const days = state.lastBackup ? Math.floor((Date.now() - state.lastBackup) / 864e5) : null;
-  if (!isPreview && state.copies.length >= 10 && (days == null || days >= 14)) {
-    html += `<div class="notice"><div class="grow"><b>Salva una copia di sicurezza</b><span class="sub">${days == null ? "Non ne hai ancora salvata una." : `L'ultima è di ${days} giorni fa.`} I dati sono solo su questo iPhone.</span></div><button class="btn small gold" data-action="backup">Salva</button></div>`;
+  const days = state.lastBackup ? Math.floor((Date.now() - state.lastBackup) / 864e5) : null, unsaved = unsavedCount();
+  if (!isPreview && unsaved && (unsaved >= 10 || days == null || days >= 2)) {
+    html += `<div class="notice"><div class="grow"><b>${unsaved} ${unsaved === 1 ? "carta non ancora salvata" : "carte non ancora salvate"}</b><span class="sub">${days == null ? "Non hai ancora una copia di sicurezza." : `L'ultima copia è di ${days ? days + (days === 1 ? " giorno" : " giorni") + " fa" : "oggi"}.`} Salvala su iCloud o OneDrive: contiene anche le foto.</span></div><button class="btn small gold" data-action="backup">Salva</button></div>`;
   }
   return html;
 }
@@ -839,8 +931,9 @@ async function renderBinder(banner) {
   if (ui.setView !== view || ui.tab !== "collection") return;
   const d = res.data, ed = view.ed;
   setHeader(d.name, true);
-  const owned = {};
-  state.copies.filter(c => c.lang === ed).forEach(c => { const id = cardOf(c)?.id; if (id) owned[id] = (owned[id] || 0) + 1; });
+  const owned = {}, myPhoto = {};
+  state.copies.filter(c => c.lang === ed).forEach(c => { const id = cardOf(c)?.id; if (id) { owned[id] = (owned[id] || 0) + 1; if (c.photo && !myPhoto[id]) myPhoto[id] = c.id; } });
+  const mine = view.img === "mine";
   const official = d.cardCount?.official || 0;
   const cards = (d.cards || []).map(c => ({ ...c, localId: String(c.localId) }));
   const have = cards.filter(c => owned[c.id]).length;
@@ -852,7 +945,7 @@ async function renderBinder(banner) {
     const slice = visible.slice(i, i + 9);
     pages += `<div class="page"><div class="page-label"><span>Pagina ${i / 9 + 1}</span><span class="num">${esc(cardNumber(slice[0].localId, official).split("/")[0])}–${esc(cardNumber(slice[slice.length - 1].localId, official).split("/")[0])}</span></div>${slice.map(c => `
       <button class="pocket ${owned[c.id] ? "owned" : "missing"}" data-action="open-card" data-id="${esc(c.id)}" data-lang="${esc(res.lang)}" data-ed="${esc(ed)}" aria-label="${esc(c.name)} ${esc(cardNumber(c.localId, official))}, ${owned[c.id] ? owned[c.id] + " possedute" : "mancante"}">
-        ${art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
+        ${mine && myPhoto[c.id] ? `<div class="art"><img class="photo" data-photo="${esc(myPhoto[c.id])}" alt="La tua foto"></div>` : art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
         <span class="label num">${esc(cardNumber(c.localId, official))}</span>
       </button>`).join("")}</div>`;
   }
@@ -862,6 +955,7 @@ async function renderBinder(banner) {
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><div><b class="price-big" style="font-size:30px">${have}</b><span class="sub"> di ${cards.length} carte (${Math.round(pct * 100)}%)</span></div><span class="euro">${euro(value)}</span></div>
       <div class="bar ${pct >= 1 ? "full" : ""}"><span style="width:${(pct * 100).toFixed(1)}%"></span></div>
       ${seg("binder-filter", [["all", "Tutte", cards.length], ["owned", "Possedute", have], ["missing", "Mancanti", cards.length - have]], view.filter || "all")}
+      ${Object.keys(myPhoto).length ? seg("binder-img", [["cat", "Immagini del catalogo"], ["mine", "Le mie foto", Object.keys(myPhoto).length]], view.img || "cat") : ""}
       <button class="btn gold" data-action="scan-this-set" data-set="${esc(d.id)}" data-name="${esc(d.name)}" data-ed="${esc(ed)}">Scansiona carte di questa espansione</button>
     </section>
     <div class="binder">${pages || `<p class="note">Nessuna carta in questo filtro.</p>`}</div>`;
@@ -895,38 +989,250 @@ async function renderBrowse(banner) {
 }
 
 // ================================================================ Scansione veloce
-// Lettura continua del numero → conferma con 2 letture uguali → ricerca in cache →
-// carta unica: aggiunta automatica con le impostazioni della sessione; più carte: scelta con un tocco.
+// 1) Lettura continua del numero nella fascia bassa della carta, con tre trattamenti dell'immagine a rotazione.
+// 2) Conferma quando lo stesso numero torna due volte in pochi istanti.
+// 3) Analisi della carta intera: lingua (testo occidentale o scrittura asiatica), nome, foto.
+// 4) Ricerca nel catalogo: carta unica e nome coerente → aggiunta automatica con la foto; altrimenti scelta con un tocco.
 const scan = {
   lang: null, variant: "normal", cond: null, auto: true, lockSet: null,
-  running: false, paused: false, busy: false, status: "", last: null, lastSeen: 0, cooldown: new Map(),
-  pending: null, session: [], fresh: null, cameraOff: false, timer: null
+  running: false, paused: false, busy: false, status: "", votes: new Map(), frame: 0, cooldown: new Map(),
+  pending: null, session: [], info: new Map(), fresh: null, cameraOff: false, timer: null, lastLang: null, capture: false, side: null
 };
-let stream = null, ocrWorker = null, ocrLoading = null;
+let stream = null;
 
-function loadOCR() {
-  if (ocrWorker) return Promise.resolve(ocrWorker);
-  return ocrLoading ||= (async () => {
-    if (!window.Tesseract) {
-      await new Promise((resolve, reject) => {
-        const sc = document.createElement("script");
-        sc.src = OCR_DIR + "tesseract.min.js"; sc.onload = resolve; sc.onerror = () => reject(new Error("Lettura automatica non disponibile"));
-        document.head.appendChild(sc);
-      });
-    }
-    const w = await Tesseract.createWorker("eng", 1, {
-      workerPath: OCR_DIR + "worker.min.js", corePath: OCR_DIR, langPath: OCR_DIR.replace(/\/$/, ""), workerBlobURL: false, gzip: true
-    });
-    await w.setParameters({ tessedit_char_whitelist: "0123456789/", tessedit_pageseg_mode: "11" });
-    return (ocrWorker = w);
-  })().catch(e => { ocrLoading = null; throw e; });
+// ---------------------------------------------------------------- Lettori (Tesseract.js, ospitato nella cartella ocr/)
+const tessOpts = () => ({ workerPath: OCR_DIR + "worker.min.js", corePath: OCR_DIR, langPath: OCR_DIR.replace(/\/$/, ""), workerBlobURL: false, gzip: true });
+let tessLib = null;
+function loadTessLib() {
+  if (window.Tesseract) return Promise.resolve();
+  return tessLib ||= new Promise((resolve, reject) => {
+    const sc = document.createElement("script");
+    sc.src = OCR_DIR + "tesseract.min.js"; sc.onload = resolve;
+    sc.onerror = () => { tessLib = null; reject(new Error("Lettura automatica non disponibile")); };
+    document.head.appendChild(sc);
+  });
 }
+// eng: numeri e testo occidentale. jpn e kor: si scaricano solo la prima volta che serve una carta asiatica.
+const workers = {}, workerLoading = {};
+function loadWorker(lang = "eng") {
+  if (workers[lang]) return Promise.resolve(workers[lang]);
+  return workerLoading[lang] ||= (async () => {
+    await loadTessLib();
+    return (workers[lang] = await Tesseract.createWorker(lang, 1, tessOpts()));
+  })().catch(e => { delete workerLoading[lang]; throw e; });
+}
+const loadOCR = () => loadWorker("eng");
+const DIGITS = { tessedit_char_whitelist: "0123456789/", tessedit_pageseg_mode: "11" };
+const LINE = { tessedit_char_whitelist: "", tessedit_pageseg_mode: "7" };
+const BLOCK = { tessedit_char_whitelist: "", tessedit_pageseg_mode: "3" };
+async function ocr(worker, canvas, params) {
+  if (worker.__params !== params) { await worker.setParameters(params); worker.__params = params; }
+  return (await worker.recognize(canvas)).data;
+}
+
+// ---------------------------------------------------------------- Geometria e immagini
+const srcSize = s => ({ w: s.videoWidth || s.naturalWidth || s.width, h: s.videoHeight || s.naturalHeight || s.height });
+// Dove si trova la cornice gialla nei pixel del video: il video riempie il riquadro (object-fit: cover) e viene ritagliato.
+function frameRect(v) {
+  const f = v.parentElement?.querySelector(".frame")?.getBoundingClientRect(), vr = v.getBoundingClientRect();
+  if (!f || !vr.width || !v.videoWidth) return null;
+  const s = Math.max(vr.width / v.videoWidth, vr.height / v.videoHeight);
+  const dx = (vr.width - v.videoWidth * s) / 2, dy = (vr.height - v.videoHeight * s) / 2;
+  return { x: (f.left - vr.left - dx) / s, y: (f.top - vr.top - dy) / s, w: f.width / s, h: f.height / s };
+}
+// In una foto la carta non ha una cornice: provo rettangoli centrati di grandezza diversa.
+function photoRects(w, h) {
+  return [0.9, 0.75, 0.6].map(k => { let rw = w * k, rh = rw * 337 / 245; if (rh > h * 0.97) { rh = h * 0.97; rw = rh * 245 / 337; } return { x: (w - rw) / 2, y: (h - rh) / 2, w: rw, h: rh }; });
+}
+// Ritaglia una fascia della carta (in frazioni) e la porta in grigio, ingrandita: la carta "misura" targetW pixel.
+function band(src, r, x0, x1, y0, y1, targetW) {
+  const { w: W, h: H } = srcSize(src), k = targetW / r.w;
+  const sx = r.x + r.w * x0, sy = r.y + r.h * y0, sw = r.w * (x1 - x0), sh = r.h * (y1 - y0);
+  const cx0 = Math.max(0, sx), cy0 = Math.max(0, sy), cx1 = Math.min(W, sx + sw), cy1 = Math.min(H, sy + sh);
+  if (cx1 - cx0 < 4 || cy1 - cy0 < 4) return null;
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(sw * k)); c.height = Math.max(1, Math.round(sh * k));
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.imageSmoothingQuality = "high";
+  g.drawImage(src, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - sx) * k, (cy0 - sy) * k, (cx1 - cx0) * k, (cy1 - cy0) * k);
+  const im = g.getImageData(0, 0, c.width, c.height), p = im.data;
+  for (let i = 0; i < p.length; i += 4) { const v = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = v; }
+  g.putImageData(im, 0, 0);
+  return c;
+}
+// Tiene solo l'inchiostro: scuro (testo nero su fondi colorati) o chiaro (testo bianco sulle carte a tutta immagine).
+function inkMask(c, th, light) {
+  const g = c.getContext("2d", { willReadFrequently: true }), im = g.getImageData(0, 0, c.width, c.height), p = im.data;
+  for (let i = 0; i < p.length; i += 4) { const ink = light ? p[i] > th : p[i] < th; p[i] = p[i + 1] = p[i + 2] = ink ? 0 : 255; }
+  g.putImageData(im, 0, 0);
+  return c;
+}
+const NUM_PASSES = [c => inkMask(c, 95, false), c => c, c => inkMask(c, 200, true)];
+// Fotografia della carta dentro la cornice: serve per l'analisi e per l'archivio.
+function snapshot(src, r, maxW = 1100) {
+  const { w: W, h: H } = srcSize(src), k = Math.min(1, maxW / r.w);
+  const c = document.createElement("canvas");
+  c.width = Math.round(r.w * k); c.height = Math.round(r.h * k);
+  const g = c.getContext("2d");
+  g.fillStyle = "#111"; g.fillRect(0, 0, c.width, c.height);
+  const cx0 = Math.max(0, r.x), cy0 = Math.max(0, r.y), cx1 = Math.min(W, r.x + r.w), cy1 = Math.min(H, r.y + r.h);
+  g.drawImage(src, cx0, cy0, cx1 - cx0, cy1 - cy0, (cx0 - r.x) * k, (cy0 - r.y) * k, (cx1 - cx0) * k, (cy1 - cy0) * k);
+  return c;
+}
+function photoBlob(canvas, maxW = 720) {
+  const k = Math.min(1, maxW / canvas.width), c = document.createElement("canvas");
+  c.width = Math.round(canvas.width * k); c.height = Math.round(canvas.height * k);
+  c.getContext("2d").drawImage(canvas, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(b => res(b), "image/jpeg", 0.82));
+}
+
+// ---------------------------------------------------------------- Numero stampato
+// Le cifre in corsivo vengono a volte lette come lettere, e la barra come 7 o 1: provo tutte le letture plausibili
+// e tengo solo quelle con un totale che esiste davvero in un'espansione.
+const normDigits = t => String(t).replace(/[OoDQ]/g, "0").replace(/[Il|!i\][]/g, "1").replace(/[Ss]/g, "5").replace(/B/g, "8").replace(/[Zz]/g, "2").replace(/G/g, "6").replace(/\\/g, "/");
+function numberCandidates(text, totals) {
+  const s = normDigits(text), out = [];
+  const add = (n, t, pri) => { if (n >= 1 && (totals.size ? totals.has(t) : t >= 10) && n <= t + 150 && !out.some(o => o.n === n && o.t === t)) out.push({ n, t, pri }); };
+  for (let i = 1; i < s.length - 2; i++) {
+    const ch = s[i]; if (!"/71".includes(ch)) continue;
+    const before = s.slice(Math.max(0, i - 3), i).match(/\d+$/)?.[0], after = s.slice(i + 1).match(/^\s?(\d{2,3})/);
+    if (!before || !after) continue;
+    for (const tl of [3, 2]) {
+      const tt = after[1].slice(0, tl); if (tt.length !== tl) continue;
+      for (const nl of [3, 2, 1]) if (before.length >= nl) add(parseInt(before.slice(-nl), 10), parseInt(tt, 10), ch === "/" ? 2 : 1);
+    }
+  }
+  return out.sort((a, b) => b.pri - a.pri);
+}
+const totalsCache = {};
+async function knownTotals(langs) {
+  const key = langs.join(",");
+  if (totalsCache[key]) return totalsCache[key];
+  const s = new Set();
+  for (const l of langs) Object.values(await setIndex(l)).forEach(x => x.cardCount?.official && s.add(x.cardCount.official));
+  if (s.size) totalsCache[key] = s;
+  return s;
+}
+const scanLangs = () => scan.lang === "auto" ? EDITION_ORDER : [...new Set([scan.lang, fallbackLang(scan.lang)])];
+// Il numero è in basso a sinistra (carte recenti) o a destra (carte più vecchie): si leggono le due metà della fascia.
+const SIDES = [[0, 0.6], [0.4, 1]];
+async function readNumber(worker, src, r, pass, totals, sides = [0, 1]) {
+  const out = [];
+  for (const side of sides) {
+    const c = band(src, r, SIDES[side][0], SIDES[side][1], 0.86, 0.985, 1400);
+    if (!c) continue;
+    for (const k of numberCandidates((await ocr(worker, pass(c), DIGITS)).text, totals)) if (!out.some(o => o.n === k.n && o.t === k.t)) out.push({ ...k, side });
+  }
+  return out;
+}
+// Due letture uguali in pochi istanti confermano il numero; poi lo ignoro finché la carta resta inquadrata.
+function vote(cands) {
+  const now = Date.now();
+  for (const [k, e] of scan.votes) if (now - e.last > 2500) scan.votes.delete(k);
+  let best = null;
+  for (const c of cands.slice(0, 3)) {
+    const k = c.n + "/" + c.t;
+    if (scan.cooldown.get(k) > now) { scan.cooldown.set(k, now + 2500); return null; }
+    const e = scan.votes.get(k) || { c, count: 0, last: 0 };
+    e.count++; e.last = now; e.c = c; scan.votes.set(k, e);
+    if (e.count >= 2 && (!best || e.count > best.count)) best = e;
+  }
+  if (!best) {
+    const top = [...scan.votes.values()].sort((a, b) => b.count - a.count)[0];
+    if (top) setScanStatus(`Letto ${cardNumber(String(top.c.n), top.c.t)}…`, "reading");
+    return null;
+  }
+  scan.votes.clear();
+  scan.cooldown.set(best.c.n + "/" + best.c.t, now + 3000);
+  if (best.c.side != null) scan.side = best.c.side;
+  return best.c;
+}
+
+// ---------------------------------------------------------------- Lingua e nome
+const WEST_WORDS = {
+  it: "danni debolezza resistenza ritirata costo di il la lo gli le del della dei delle che questo questa tuo tua tuoi avversario pokémon attivo panchina mazzo mano carte carta energia energie allenatore strumento aiuto stadio turno lancia moneta testa croce ogni un una per non con se puoi scarta pesca durante",
+  en: "damage weakness resistance retreat the this that your opponent's opponent pokémon active bench benched deck hand card cards energy trainer item supporter stadium turn flip coin heads tails each of to for if you may discard draw during attack does more",
+  fr: "dégâts faiblesse résistance retraite le la les des du de votre vos adversaire pokémon actif banc deck main carte cartes énergie dresseur objet supporter stade tour lancez pièce face pile chaque un une pour si vous pouvez défaussez piochez pendant attaque",
+  de: "schaden schwäche schwache resistenz rückzug ruckzug der die das dein deine deinen deines gegner gegnerischen gegnerische pokémon aktive aktiven bank deck hand karte karten energie trainer item unterstützer stadion zug wirf münze munze kopf zahl jede jedes ein eine für wenn du kannst lege ziehe während attacke und mit auf",
+  es: "daño dano debilidad resistencia retirada el la los las del de tu tus rival pokémon activo banca baraja mano carta cartas energía entrenador objeto partidario estadio turno lanza moneda cara cruz cada un una para si puedes descarta roba durante ataque que y con",
+  pt: "dano fraqueza resistência resistencia recuo o a os as do da dos das de seu sua seus oponente pokémon ativo banco baralho mão carta cartas energia treinador item apoiador estádio turno jogue moeda cara coroa cada um uma para se você voce pode descarte compre durante ataque que e com"
+};
+const WEST_STRONG = { it: "debolezza resistenza ritirata danni avversario panchina allenatore", en: "weakness retreat damage opponent's opponent benched trainer", fr: "faiblesse retraite dégâts degats adversaire dresseur", de: "schwäche schwache rückzug ruckzug schaden gegner gegnerischen", es: "debilidad retirada daño rival entrenador banca", pt: "fraqueza recuo oponente treinador apoiador" };
+const WEST_SETS = Object.fromEntries(Object.keys(WEST_WORDS).map(l => [l, { all: new Set(WEST_WORDS[l].split(" ")), strong: new Set(WEST_STRONG[l].split(" ")) }]));
+function westernLanguage(text) {
+  const words = String(text).toLowerCase().normalize("NFC").match(/[a-zà-öø-ÿ']{2,}/g) || [];
+  const sc = Object.fromEntries(Object.keys(WEST_SETS).map(l => [l, 0]));
+  for (const w of words) for (const l in WEST_SETS) { if (WEST_SETS[l].all.has(w)) sc[l] += 1; if (WEST_SETS[l].strong.has(w)) sc[l] += 4; }
+  // Dalle carte del 2023 la lingua è stampata accanto al numero: «PAL IT 025/193».
+  const code = String(text).match(/\b(EN|IT|FR|DE|ES|PT)\b\s*[0-9O]{1,3}\s*\//)?.[1]?.toLowerCase() || null;
+  const best = Object.entries(sc).sort((a, b) => b[1] - a[1]);
+  return { code, best: best[0][0], score: best[0][1], second: best[1][1], latin: (String(text).match(/[A-Za-zÀ-ÿ]/g) || []).length };
+}
+const scriptCount = t => ({ kana: (t.match(/[\u3040-\u30ff]/g) || []).length, hangul: (t.match(/[\uac00-\ud7af\u3130-\u318f]/g) || []).length, han: (t.match(/[\u4e00-\u9fff]/g) || []).length, latin: (t.match(/[A-Za-z]/g) || []).length });
+// Lingua della carta: { lang, sure, family: "west" | "ja" | "ko" | "zh", name }. Se l'edizione è fissata, si legge solo il nome.
+// Ordine: codice lingua stampato → parole del testo → scrittura (lettere latine, giapponese, coreano, cinese) → verifica sul catalogo.
+async function analyzeCard(still) {
+  const R = { x: 0, y: 0, w: still.width, h: still.height };
+  const fixed = scan.lang !== "auto" ? scan.lang : null;
+  const eng = await loadOCR();
+  const out = { lang: fixed, sure: !!fixed, family: fixed ? ({ jp: "ja", kr: "ko", cn: "zh" }[regionOf(fixed)] || "west") : null, name: "" };
+  const nb = band(still, R, 0.05, 0.8, 0.025, 0.11, 1300);
+  if (!fixed || out.family === "west") out.name = nb ? (await ocr(eng, nb, LINE)).text.trim() : "";
+  if (!fixed) {
+    const body = band(still, R, 0, 1, 0.5, 0.985, 1000);
+    const W = westernLanguage(body ? (await ocr(eng, body, BLOCK)).text : "");
+    if (W.code) Object.assign(out, { lang: W.code, sure: true, family: "west" });
+    else if (W.score >= 6 && W.score >= 2 * W.second) Object.assign(out, { lang: W.best, sure: true, family: "west" });
+    else if (body) {
+      // Poco testo occidentale riconoscibile: guardo la scrittura con il lettore giapponese, poi con quello coreano.
+      // Sulle carte occidentali a tutta immagine il lettore giapponese trova comunque molte lettere latine (oltre 60), su quelle asiatiche 10–25.
+      setScanStatus("Riconosco la lingua…", "hit");
+      const j = scriptCount((await ocr(await loadWorker("jpn"), body, BLOCK)).text);
+      if (j.latin >= 45) Object.assign(out, { family: "west", lang: W.score >= 3 ? W.best : null });
+      else if (j.kana >= 15 && j.kana >= j.han) Object.assign(out, { lang: "ja", sure: true, family: "ja" });
+      else {
+        const kd = await ocr(await loadWorker("kor"), body, BLOCK), k = scriptCount(kd.text);
+        if (kd.confidence >= 50 && k.hangul >= 10) Object.assign(out, { lang: "ko", sure: true, family: "ko" });
+        else if (j.han >= 15 && j.kana <= 0.6 * j.han) Object.assign(out, { lang: null, sure: true, family: "zh" });
+      }
+    }
+    if (!out.lang && out.family === "zh") out.lang = state.settings.lang === "zh-cn" || scan.lastLang === "zh-cn" ? "zh-cn" : "zh-tw";
+    if (!out.lang) {
+      const prev = out.family === "west" ? [scan.lastLang, state.settings.lang].find(l => regionOf(l) === "intl") || "en" : null;
+      out.lang = prev || scan.lastLang || state.settings.lang; out.sure = false;
+    }
+    out.family ||= { jp: "ja", kr: "ko", cn: "zh" }[regionOf(out.lang)] || "west";
+  }
+  if (out.family !== "west" && nb) out.name = (await ocr(await loadWorker(out.family === "ko" ? "kor" : "jpn"), nb, LINE)).text.trim();
+  return out;
+}
+// Quanto il nome letto somiglia al nome di una carta (0–1): cerco il nome dentro la riga letta, tollerando errori.
+const plain = s => String(s).toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\p{L}\p{N}]+/gu, "");
+function nameScore(read, name) {
+  const a = plain(read), b = plain(name);
+  if (!a || !b) return 0;
+  if (a.includes(b)) return 1;
+  let best = 0;
+  for (let len = Math.max(1, b.length - 2); len <= b.length + 2; len++)
+    for (let i = 0; i + len <= a.length; i++) best = Math.max(best, 1 - lev(a.slice(i, i + len), b) / Math.max(len, b.length));
+  return best;
+}
+function lev(a, b) {
+  const d = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) { let prev = d[0]; d[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; } }
+  return d[b.length];
+}
+
+// ---------------------------------------------------------------- Fotocamera
 async function startScanner() {
   if (stream) { attachVideo(); return; }
   if (scan.cameraOff || startScanner.pending) return;
   startScanner.pending = true;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    // Più pixel = numero più leggibile: chiedo il 4K, l'iPhone scende da solo se non può.
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false });
     if (ui.tab !== "scan") { stopScanner(); return; }
     attachVideo();
     if (!scan.running) { scan.running = true; loop(); }
@@ -949,95 +1255,157 @@ function setScanStatus(text, mode) {
   const el = $("#scan-status"); if (el) el.textContent = text;
   const box = $("#scanner"); if (box) { box.classList.toggle("reading", mode === "reading"); box.classList.toggle("hit", mode === "hit"); }
 }
-// Ritaglia la fascia del numero dentro la cornice e la prepara per la lettura (grigio e contrasto).
-function cropNumberStrip(src, w, h) {
-  const fw = w * 0.66, fh = Math.min(h, fw * 337 / 245);
-  const x0 = (w - fw) / 2, y0 = (h - fh) / 2;
-  const sy = Math.max(0, y0 + fh * 0.83), sh = Math.max(1, Math.min(fh * 0.17, h - sy));
-  const scale = Math.min(2, 1000 / fw);
-  const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(fw * scale)); c.height = Math.max(1, Math.round(sh * scale));
-  const ctx = c.getContext("2d", { willReadFrequently: true });
-  ctx.drawImage(src, x0, sy, fw, sh, 0, 0, c.width, c.height);
-  const img = ctx.getImageData(0, 0, c.width, c.height), p = img.data;
-  let sum = 0;
-  for (let i = 0; i < p.length; i += 4) { const g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]; p[i] = g; sum += g; }
-  const mean = sum / (p.length / 4);
-  for (let i = 0; i < p.length; i += 4) { const v = Math.max(0, Math.min(255, (p[i] - mean) * 1.8 + 128)); p[i] = p[i + 1] = p[i + 2] = v; }
-  ctx.putImageData(img, 0, 0);
-  return c;
+// Impronta minuscola della carta inquadrata: dice se la carta è cambiata o se è ferma, e se c'è qualcosa nella cornice.
+function signature(src, r) {
+  const { w: W, h: H } = srcSize(src), c = document.createElement("canvas"); c.width = 12; c.height = 16;
+  const x0 = Math.max(0, r.x), y0 = Math.max(0, r.y), x1 = Math.min(W, r.x + r.w), y1 = Math.min(H, r.y + r.h);
+  const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(src, x0, y0, x1 - x0, y1 - y0, 0, 0, 12, 16);
+  const d = g.getImageData(0, 0, 12, 16).data, out = [];
+  for (let i = 0; i < d.length; i += 4) out.push((d[i] + d[i + 1] + d[i + 2]) / 3);
+  return out;
 }
-const numberIn = text => parseNumber((text || "").replace(/\s+/g, " ").match(/\d{1,3}\s?\/\s?\d{2,3}/)?.[0] || "");
+const sigDiff = (a, b) => { if (!a || !b) return 255; let t = 0; for (let i = 0; i < a.length; i++) t += Math.abs(a[i] - b[i]); return t / a.length; };
+const sigSpread = a => { const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length); };
 async function loop() {
   if (!scan.running || ui.tab !== "scan") return;
   const v = $("#video");
   if (!scan.paused && !scan.busy && !scan.pending && !sheet && v && v.videoWidth) {
     scan.busy = true;
     try {
-      const worker = await loadOCR();
-      if (!scan.last) setScanStatus(scan.lockSet ? `Inquadra una carta di ${scan.lockSet.name}` : "Inquadra la carta: leggo il numero", "reading");
-      const { data } = await worker.recognize(cropNumberStrip(v, v.videoWidth, v.videoHeight));
-      handleRead(numberIn(data.text));
+      const worker = await loadOCR(), r = frameRect(v);
+      if (r && scan.capture) { scan.capture = false; scan.handled = true; scan.votes.clear(); await captureFrom(v, [r]); }
+      else if (r) {
+        if (!scan.votes.size) setScanStatus(scan.lockSet ? `Inquadra una carta di ${scan.lockSet.name}` : "Inquadra la carta: leggo il numero", "reading");
+        const totals = await knownTotals(scanLangs()), k = scan.frame++;
+        // Carta nuova o mossa: riparto. Carta ferma: conto i fotogrammi.
+        const sig = signature(v, r);
+        if (sigDiff(sig, scan.sig) > 16) { scan.steady = 0; scan.handled = false; } else scan.steady = (scan.steady || 0) + 1;
+        scan.sig = sig;
+        // Un lato per fotogramma: quello dell'ultima carta riconosciuta due volte su tre, altrimenti si alternano.
+        const side = scan.side == null ? k % 2 : (k % 3 === 2 ? 1 - scan.side : scan.side);
+        const hit = vote(await readNumber(worker, v, r, NUM_PASSES[k % NUM_PASSES.length], totals, [side]));
+        if (hit) { scan.handled = true; await recognize(snapshot(v, r), [hit]); }
+        // Carta ferma da un po' ma numero illeggibile: scatto da solo e provo anche con il nome.
+        else if (!scan.handled && scan.steady >= 8 && sigSpread(sig) > 22) { scan.handled = true; scan.votes.clear(); await captureFrom(v, [r]); }
+      }
     } catch {
       setScanStatus("Lettura automatica non disponibile: scrivi il numero qui sotto", "");
       scan.running = false;
     }
     scan.busy = false;
   }
-  if (scan.running) scan.timer = setTimeout(loop, 300);
+  if (scan.running) scan.timer = setTimeout(loop, 120);
 }
-// Conferma un numero quando lo legge uguale due volte di fila; poi lo ignora finché la stessa carta resta inquadrata.
-function handleRead(p) {
-  const now = Date.now();
-  if (!p) { if (now - scan.lastSeen > 1200) scan.last = null; return; }
-  scan.lastSeen = now;
-  const label = numLabel(p);
-  if (scan.cooldown.get(label) > now) { scan.cooldown.set(label, now + 2500); return; }
-  if (scan.last === label) { scan.last = null; scan.cooldown.set(label, now + 2500); acceptNumber(p); }
-  else { scan.last = label; setScanStatus(`Letto ${label}…`, "reading"); }
+// Scatto manuale (pulsante o foto): analizza l'immagine anche se il numero non si legge, e prova con il nome.
+async function captureFrom(src, rects) {
+  setScanStatus("Analizzo la foto…", "hit");
+  const worker = await loadOCR(), totals = await knownTotals(scanLangs());
+  let cands = [], used = rects[0];
+  for (const r of rects) {
+    for (const pass of NUM_PASSES) { cands = await readNumber(worker, src, r, pass, totals); if (cands.length) break; }
+    if (cands.length) { used = r; break; }
+  }
+  await recognize(snapshot(src, used), cands);
+}
+
+// ---------------------------------------------------------------- Dalla carta letta alla collezione
+async function recognize(still, cands) {
+  const n0 = cands[0];
+  setScanStatus(n0 ? `Letto ${cardNumber(String(n0.n), n0.t)}: riconosco la carta…` : "Riconosco la carta…", "hit");
+  let info;
+  try { info = await analyzeCard(still); }
+  catch { info = { lang: scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang, sure: false, family: null, name: "" }; }
+  if (info.sure) scan.lastLang = info.lang;
+  const photo = await photoBlob(still).catch(() => null);
+  let langs = info.family === "zh" && scan.lang === "auto" ? [info.lang, info.lang === "zh-tw" ? "zh-cn" : "zh-tw"] : [info.lang];
+  if (scan.lang === "auto") langs = [...new Set([...langs, ...[scan.lastLang, state.settings.lang, "en", "ja", "zh-tw", "ko", "zh-cn"].filter(Boolean)])];
+  let items = [], lang = info.lang, label = "";
+  for (const [i, l] of langs.entries()) {
+    for (const c of cands.slice(0, 3)) {
+      const res = await findByNumber({ number: String(c.n), total: c.t }, l);
+      if (res.items.length) { items = res.items; lang = res.lang; label = cardNumber(String(c.n), c.t); break; }
+    }
+    if (items.length) {
+      if (l !== info.lang) { const famOk = info.family === "zh" && i === 1; info.lang = l; if (!famOk) info.sure = false; }
+      break;
+    }
+    if (!cands.length) break;
+  }
+  // Nessun numero utile: cerco per nome (solo se il nome letto è abbastanza lungo).
+  if (!items.length && plain(info.name).length >= 4) {
+    const words = info.family === "west" ? info.name.split(/\s+/).filter(w => plain(w).length >= 4).sort((a, b) => b.length - a.length) : [info.name.replace(/\s+/g, "")];
+    for (const w of words.slice(0, 2)) {
+      try {
+        const list = await api(info.lang, "cards", { name: w.replace(/[^\p{L}\p{N}'-]/gu, "") });
+        if (list.length) { const idx = await setIndex(info.lang); items = list.slice(-24).reverse().map(b => ({ ...b, localId: String(b.localId), setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0 })); lang = info.lang; label = `«${w}»`; break; }
+      } catch {}
+    }
+  }
+  if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
+  if (!items.length) {
+    setScanStatus(n0 ? `Nessuna carta ${cardNumber(String(n0.n), n0.t)} in ${edName(info.lang).toLowerCase()}: scrivi il numero o riprova` : "Non riconosco la carta: avvicinala o scrivi il numero", "");
+    beep(false); return;
+  }
+  // Ordine: nome più somigliante, poi l'espansione appena scansionata.
+  const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
+  const scored = items.map(b => ({ b, s: info.name ? nameScore(info.name, b.name) : 0, same: b.setId === lastSet ? 1 : 0 }))
+    .sort((x, y) => (y.s - x.s) || (y.same - x.same));
+  const top = scored[0], second = scored[1];
+  const nameRead = plain(info.name).length >= 3;
+  const clear = scored.length === 1 ? (!nameRead || top.s >= 0.34)
+    : (top.s >= 0.6 && (!second || top.s - second.s >= 0.2)) || (!nameRead && top.same && scored.filter(x => x.same).length === 1);
+  const ctx = { lang: info.lang, guess: !info.sure, photo };
+  if (scan.auto && clear) { await addFromScan(top.b, lang, ctx); return; }
+  scan.pending = { label, lang, items: scored.slice(0, 12).map(x => x.b), ctx };
+  setScanStatus(`${scored.length > 1 ? scored.length + " carte possibili" : "Controlla la carta"} ${label}: tocca quella giusta`, "");
+  beep(true);
+  renderScanPanels();
 }
 async function acceptNumber(p) {
+  // Numero scritto a mano o lettura simulata: niente foto, lingua dell'ultima carta riconosciuta.
+  const lang = scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang;
   setScanStatus(`Cerco ${numLabel(p)}…`, "hit");
   let res;
-  try { res = await findByNumber(p, scan.lang); }
-  catch (e) { setScanStatus(e.message, ""); return; }
+  try { res = await findByNumber(p, lang); } catch (e) { setScanStatus(e.message, ""); return; }
   let items = res.items;
-  if (scan.lockSet) {
-    const inSet = items.filter(b => b.setId === scan.lockSet.id);
-    if (inSet.length) items = inSet;
-  }
-  // Prima le carte dell'espansione appena scansionata: di solito si scansiona un'espansione alla volta.
+  if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
   if (lastSet) items = [...items.filter(b => b.setId === lastSet), ...items.filter(b => b.setId !== lastSet)];
-  if (!items.length) { setScanStatus(`Nessuna carta ${numLabel(p)} in ${edName(scan.lang).toLowerCase()}`, ""); beep(false); return; }
+  if (!items.length) { setScanStatus(`Nessuna carta ${numLabel(p)} in ${edName(lang).toLowerCase()}`, ""); beep(false); return; }
+  const ctx = { lang, guess: scan.lang === "auto" && !scan.lastLang, photo: null };
   const sameSetFirst = lastSet && items[0].setId === lastSet && items.filter(b => b.setId === lastSet).length === 1;
-  if (scan.auto && (items.length === 1 || sameSetFirst || scan.lockSet && items.length === 1)) { await addFromScan(items[0], res.lang); return; }
-  scan.pending = { label: numLabel(p), lang: res.lang, items: items.slice(0, 12) };
+  if (scan.auto && (items.length === 1 || sameSetFirst)) { await addFromScan(items[0], res.lang, ctx); return; }
+  scan.pending = { label: numLabel(p), lang: res.lang, items: items.slice(0, 12), ctx };
   setScanStatus(`${items.length} carte con il numero ${numLabel(p)}: scegli quella giusta`, "");
   beep(true);
   renderScanPanels();
 }
-async function addFromScan(brief, lang) {
+async function addFromScan(brief, lang, ctx = {}) {
   try {
     const card = await loadCard(brief.id, lang);
+    const ed = ctx.lang && regionOf(ctx.lang) === regionOf(card.lang) ? ctx.lang : card.lang;
     const variant = card.variants[scan.variant] ? scan.variant : (Object.keys(card.variants).find(k => card.variants[k]) || "normal");
-    const already = state.copies.filter(c => cardOf(c)?.id === card.id && c.lang === scan.lang).length;
-    const copy = { id: uid(), added: Date.now(), cardKey: card.key, lang: regionOf(scan.lang) === regionOf(card.lang) ? scan.lang : card.lang,
-                   variant, cond: scan.cond, graded: false, grader: null, grade: null, purchase: null, personal: null, location: "", notes: "", already };
+    const already = state.copies.filter(c => cardOf(c)?.id === card.id && c.lang === ed).length;
+    const copy = { id: uid(), added: Date.now(), cardKey: card.key, lang: ed, variant, cond: scan.cond, graded: false, grader: null, grade: null,
+                   purchase: null, personal: null, location: "", notes: "" };
+    if (ctx.photo && await Photos.put(copy.id, ctx.photo)) copy.photo = true;
     state.copies.push(copy);
     scan.session.unshift(copy);
+    scan.info.set(copy.id, { already, guess: !!ctx.guess });
     scan.fresh = copy.id;
     scan.pending = null;
     recordSnapshot();
     beep(true);
-    setScanStatus(`Aggiunta: ${card.name} ${cardNumber(card.localId, card.official)}`, "hit");
+    setScanStatus(`Aggiunta: ${card.name} ${cardNumber(card.localId, card.official)} · ${LANG[ed]?.short || ed}`, "hit");
     renderScanPanels();
-    toast(`${card.name} aggiunta${already ? ` · ne avevi già ${already}` : ""}`, () => removeCopy(copy.id));
+    toast(`${card.name} aggiunta${already ? ` · ne avevi già ${already}` : ""}${ctx.guess ? " · controlla l'edizione" : ""}`, () => removeCopy(copy.id));
   } catch (e) {
     setScanStatus("Non riesco a caricare la carta: " + e.message, "");
   }
 }
+
 function removeCopy(id) {
+  Photos.del(id);
   state.copies = state.copies.filter(c => c.id !== id);
   scan.session = scan.session.filter(c => c.id !== id);
   recordSnapshot();
@@ -1055,7 +1423,7 @@ function beep(ok) {
 
 function renderScan(banner) {
   setHeader("Scansiona", false);
-  scan.lang ||= state.settings.scanLang || state.settings.lang;
+  scan.lang ||= state.settings.scanLang || "auto";
   scan.cond ||= state.settings.cond;
   const variantOptions = [["normal", "Normale"], ["reverse", "Reverse"], ["holo", "Holo"], ["firstEdition", "1ª ed."]];
   const demoCam = isPreview && !online;
@@ -1082,12 +1450,14 @@ function renderScan(banner) {
         <div class="status" id="scan-status">${esc(scan.status || "Avvio la fotocamera…")}</div>
         <div class="controls">
           <button class="btn small" data-action="toggle-pause">${scan.paused ? "Riprendi" : "Pausa"}</button>
-          <button class="btn small ${scan.auto ? "gold" : ""}" data-action="toggle-auto" aria-pressed="${scan.auto}">Aggiunta automatica: ${scan.auto ? "sì" : "no"}</button>
+          <button class="shutter" data-action="shutter" aria-label="Scatta e riconosci la carta"><span></span></button>
+          <button class="btn small ${scan.auto ? "gold" : ""}" data-action="toggle-auto" aria-pressed="${scan.auto}">Auto: ${scan.auto ? "sì" : "no"}</button>
         </div>
-      </section>`}
+      </section>
+      <p class="note scan-hint">Tieni la carta dentro la cornice gialla: l'app legge numero, lingua e nome e salva la foto. Se non la riconosce, tocca il pulsante bianco per scattare.</p>`}
     <section class="panel form session-bar" aria-label="Impostazioni della sessione">
       <div class="two">
-        <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang">${langOptions(scan.lang)}</select></div>
+        <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang"><option value="auto" ${scan.lang === "auto" ? "selected" : ""}>Automatica (riconosce la lingua)</option>${langOptions(scan.lang)}</select></div>
         <div class="field"><label for="scan-cond">Condizione</label><select id="scan-cond">${CONDITIONS.map(([k, n]) => `<option value="${k}" ${k === scan.cond ? "selected" : ""}>${n}</option>`).join("")}</select></div>
       </div>
       <div class="field"><div class="label"><span>Variante</span><span>separa prima le pile</span></div>${seg("scan-variant", variantOptions, scan.variant)}</div>
@@ -1095,7 +1465,7 @@ function renderScan(banner) {
       <form class="searchbar" id="manual-form"><input id="manual" placeholder="Oppure scrivi il numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" inputmode="numeric"><button class="btn primary" type="submit">Aggiungi</button></form>
     </section>
     <div id="scan-panels"></div>`;
-  $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); setIndex(scan.lang); Store.save(); };
+  $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); scan.votes.clear(); scanLangs().forEach(l => setIndex(l)); Store.save(); };
   $("#scan-cond").onchange = e => { scan.cond = e.target.value; };
   $("#manual-form").onsubmit = e => {
     e.preventDefault();
@@ -1108,18 +1478,17 @@ function renderScan(banner) {
   if (photo) photo.onchange = async e => {
     const f = e.target.files?.[0]; if (!f) return;
     e.target.value = "";
-    setScanStatus("Leggo il numero dalla foto…", "reading");
+    if (scan.busy) return;
+    scan.busy = true;
     try {
       const bmp = await createImageBitmap(f);
-      const worker = await loadOCR();
-      const { data } = await worker.recognize(cropNumberStrip(bmp, bmp.width, bmp.height));
-      const p = numberIn(data.text);
-      if (p) acceptNumber(p); else toast("Numero non leggibile: avvicina la carta o scrivilo a mano");
-    } catch (err) { toast((err.message || "Lettura non riuscita") + ": scrivi il numero a mano"); }
+      await captureFrom(bmp, photoRects(bmp.width, bmp.height));
+    } catch (err) { setScanStatus((err.message || "Lettura non riuscita") + ": scrivi il numero qui sotto", ""); }
+    finally { scan.busy = false; }
   };
   renderScanPanels();
-  // Preparo in anticipo indice delle espansioni e lettore, così la prima carta è già veloce.
-  setIndex(scan.lang);
+  // Preparo in anticipo indici delle espansioni e lettore, così la prima carta è già veloce.
+  scanLangs().forEach(l => setIndex(l));
   if (!scan.cameraOff && !demoCam) { loadOCR().catch(() => {}); startScanner(); }
 }
 function renderScanPanels() {
@@ -1135,16 +1504,26 @@ function renderScanPanels() {
     <h2 class="section-title">Questa sessione <small>${sess.length} carte · ${euro(total(sess))}</small></h2>
     ${sess.length ? `<section class="panel">${sess.map(c => {
       const card = cardOf(c);
+      const inf = scan.info.get(c.id) || {};
       return `<div class="tray-item ${scan.fresh === c.id ? "new" : ""}">
-        <button class="thumb pocket" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}" aria-label="Apri ${esc(card.name)}">${art(card)}</button>
+        <button class="thumb pocket" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}" aria-label="Apri ${esc(card.name)}">${c.photo ? `<div class="art"><img class="photo" data-photo="${esc(c.id)}" alt="La tua foto"></div>` : art(card)}</button>
         <div class="grow"><div class="name">${esc(card.name)}</div><div class="sub"><span class="num">${esc(cardNumber(card.localId, card.official))}</span> · ${esc(card.setName)}</div>
-          <div class="chips">${edChip(c.lang)}<span class="chip">${esc(c.cond)}</span>${c.already ? `<span class="chip dup">ne avevi ${c.already}</span>` : ""}<span class="euro" style="font-size:13px">${euro(copyValue(c))}</span></div></div>
+          <div class="chips"><select class="ed-pick" data-copy-ed="${esc(c.id)}" aria-label="Edizione di ${esc(card.name)}" ${edStyle(c.lang)}>${LANGS.filter(l => l.region === regionOf(card.lang)).map(l => `<option value="${l.code}" ${l.code === c.lang ? "selected" : ""}>${l.short}</option>`).join("")}</select>${inf.guess ? `<span class="chip warn">edizione da controllare</span>` : ""}<span class="chip">${esc(c.cond)}</span>${inf.already ? `<span class="chip dup">ne avevi ${inf.already}</span>` : ""}<span class="euro" style="font-size:13px">${euro(copyValue(c))}</span></div></div>
         <div class="tray-actions">
           <button class="btn small" data-action="cycle-variant" data-copy="${esc(c.id)}" aria-label="Variante ${esc(VARIANTS[c.variant])}, tocca per cambiarla">${esc(VARIANTS[c.variant])}</button>
           <button class="btn small danger" data-action="remove-copy" data-copy="${esc(c.id)}" aria-label="Togli ${esc(card.name)}">✕</button>
         </div></div>`;
-    }).join("")}</section>` : `<p class="note">Le carte aggiunte compaiono qui: tocca la variante per cambiarla, ✕ per toglierle.</p>`}`;
+    }).join("")}</section>
+    <button class="btn ghost" data-action="backup">Salva la copia di sicurezza (con le foto)</button>` : `<p class="note">Le carte aggiunte compaiono qui con la tua foto: tocca la variante o l'edizione per cambiarle, ✕ per toglierle.</p>`}`;
   scan.fresh = null;
+  root.querySelectorAll("[data-copy-ed]").forEach(sel => sel.onchange = async e => {
+    const c = state.copies.find(x => x.id === e.target.dataset.copyEd); if (!c) return;
+    const card = cardOf(c), ed = e.target.value;
+    if (card.lang !== fallbackLang(ed) && card.lang !== ed) { const t = await loadCard(card.id, ed).catch(() => null); if (t) c.cardKey = t.key; }
+    c.lang = ed; const inf = scan.info.get(c.id); if (inf) inf.guess = false;
+    if (regionOf(ed) === regionOf(card.lang)) scan.lastLang = ed;
+    recordSnapshot(); renderScanPanels();
+  });
 }
 
 // ================================================================ Valore
@@ -1214,26 +1593,37 @@ function openSettings() {
     </section>
     <h3 class="section-title">Copia di sicurezza</h3>
     <section class="panel form">
-      <p class="note">I dati sono salvati solo su questo iPhone. Salva una copia (per esempio in File › iCloud Drive) ogni due settimane e prima di cambiare telefono. Ultima copia: <b>${lastB}</b>.</p>
+      <p class="note">La copia contiene tutte le carte, le impostazioni e le foto. Salvala in File › iCloud Drive o OneDrive dopo ogni sessione di scansione: se l'iPhone si rompe o togli l'app, la ripristini da lì. Ultima copia: <b>${lastB}</b>${unsavedCount() ? ` · <b>${unsavedCount()}</b> carte aggiunte dopo` : ""}.</p>
       <div class="btn-row"><button class="btn gold" data-action="backup">Salva copia</button><label class="btn ghost" for="restore-input">Ripristina da copia</label><input id="restore-input" type="file" accept="application/json,.json" hidden></div>
     </section>
+    <h3 class="section-title">Versioni salvate sul telefono</h3>
+    <section class="panel" id="hist-list"><p class="note" style="padding:12px">Carico…</p></section>
+    <p class="note">L'app tiene da sola una versione della collezione ogni ora (le ultime 30). Servono per tornare indietro dopo un errore; restano sul telefono, quindi non sostituiscono la copia su iCloud o OneDrive.</p>
     <section class="panel">
       <a class="row" id="settings-guide" href="${esc(guideHref())}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800">Apri la guida all'uso <span class="chev" style="margin-left:auto">›</span></a>
       <button class="row" data-action="show-welcome" style="font-weight:800">Rivedi il benvenuto <span class="chev" style="margin-left:auto">›</span></button>
     </section>
     <p class="meta-line">Raccoglitore TCG · versione ${APP_VERSION} del ${APP_DATE}<br>Catalogo e prezzi: TCGdex (fonte Cardmarket). Uso personale, non affiliata a The Pokémon Company né a Cardmarket.</p>`, () => {
-    $("#set-lang").onchange = e => { state.settings.lang = e.target.value; state.settings.scanLang = e.target.value; scan.lang = null; Store.save(); };
+    $("#set-lang").onchange = e => { state.settings.lang = e.target.value; Store.save(); };
     $("#set-cond").onchange = e => { state.settings.cond = e.target.value; scan.cond = null; Store.save(); };
     document.querySelectorAll("[data-coef]").forEach(inp => inp.onchange = e => {
       const v = parseFloat(String(e.target.value).replace(",", "."));
       if (!isNaN(v) && v > 0) { state.settings.coef[e.target.dataset.coef] = v; recordSnapshot(); toast("Coefficiente salvato"); }
     });
+    History.list().then(list => {
+      const box = $("#hist-list"); if (!box) return;
+      box.innerHTML = list.length ? list.map(h => `<div class="row"><div class="grow"><b>${esc(new Date(h.at).toLocaleString("it-IT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }))}</b><span class="sub"> · ${h.copies} copie</span></div><button class="btn small ghost" data-action="restore-hist" data-key="${esc(h.key)}">Ripristina</button></div>`).join("")
+        : `<p class="note" style="padding:12px">Ancora nessuna versione: la prima si salva alla prossima modifica.</p>`;
+    });
     $("#restore-input").onchange = async e => {
       const f = e.target.files?.[0]; if (!f) return;
       e.target.value = "";
       try {
-        if (f.size > 30e6) throw new Error("File troppo grande");
-        const { state: clean, dropped } = sanitizeState(JSON.parse(await f.text()));
+        if (f.size > 400e6) throw new Error("File troppo grande");
+        toast("Controllo la copia di sicurezza…");
+        const raw = JSON.parse(await f.text());
+        const { state: clean, dropped } = sanitizeState(raw);
+        await restorePhotos(raw, clean.copies);
         const before = state;
         state = clean; Store.save(); closeSheet();
         // Per qualche secondo si può tornare alla collezione di prima.
@@ -1380,7 +1770,7 @@ function drawSheet() {
       </section>
       <p class="note">Fonte: Cardmarket via TCGdex${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
       <h3 class="section-title">Le tue copie <small>${mine.length}</small></h3>
-      ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}"><div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
+      ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}">${cp.photo ? `<img class="copy-photo" data-photo="${esc(cp.id)}" alt="La tua foto">` : ""}<div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
       ${sheet.form ? copyForm(c) : quickAdd(c)}`;
   }
   root.innerHTML = `<div class="sheet-wrap" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(c?.name || "Carta")}">
@@ -1424,6 +1814,10 @@ function copyForm(c) {
       <div class="field"><label for="f-purchase">Pagata (€)</label><input id="f-purchase" inputmode="decimal" value="${esc(f.purchase ?? "")}"></div>
       <div class="field"><label for="f-personal">Valore tuo (€)</label><input id="f-personal" inputmode="decimal" placeholder="usa il trend" value="${esc(f.personal ?? "")}"></div>
     </div>
+    <div class="field"><div class="label">Foto della tua copia</div>
+      <div class="photo-edit">${f.photo || f.photoBlob ? `<img class="copy-photo big" ${f.photoBlob ? `src="${esc(f.photoPreview)}"` : `data-photo="${esc(f.id)}"`} alt="La tua foto">` : `<span class="note">Nessuna foto</span>`}
+        <label class="btn small" for="f-photo">${f.photo || f.photoBlob ? "Cambia foto" : "Aggiungi foto"}</label><input id="f-photo" type="file" accept="image/*" hidden>
+        ${f.photo || f.photoBlob ? `<button type="button" class="btn small ghost danger" data-action="remove-photo">Togli</button>` : ""}</div></div>
     <div class="field"><label for="f-location">Posizione</label><input id="f-location" placeholder="es. raccoglitore 2, pagina 5" value="${esc(f.location || "")}"></div>
     <div class="field"><label for="f-notes">Note</label><textarea id="f-notes" rows="2">${esc(f.notes || "")}</textarea></div>
     <p class="note">${price != null ? `Trend per questa variante: ${euro(price)} × coefficiente ${LANG[f.lang]?.short} ${coef(f.lang)}.` : "Nessun trend per questa variante: puoi inserire il tuo valore."}</p>
@@ -1440,6 +1834,16 @@ function readForm() {
 }
 function bindForm(c) {
   $("#f-graded").onchange = e => { $("#grade-fields").hidden = !e.target.checked; };
+  $("#f-photo").onchange = async e => {
+    const file = e.target.files?.[0]; if (!file) return;
+    readForm();
+    const blob = await shrinkPhoto(file).catch(() => null);
+    if (!blob) { toast("Foto non leggibile"); return; }
+    const f = sheet.form;
+    if (f.id) { if (await Photos.put(f.id, blob)) { const cp = state.copies.find(x => x.id === f.id); if (cp) cp.photo = f.photo = true; Store.save(); toast("Foto salvata"); } }
+    else { if (f.photoPreview) URL.revokeObjectURL(f.photoPreview); f.photoBlob = blob; f.photoPreview = URL.createObjectURL(blob); }
+    drawSheet();
+  };
   $("#copy-form").onsubmit = async e => {
     e.preventDefault();
     readForm();
@@ -1450,7 +1854,11 @@ function bindForm(c) {
     const data = { cardKey: target.key, lang: f.lang, variant: f.variant, cond: f.cond, graded: f.graded, grader: f.graded ? f.grader : null,
                    grade: f.graded ? f.grade : null, purchase: f.purchase, personal: f.personal, location: f.location, notes: f.notes };
     if (f.id) Object.assign(state.copies.find(cp => cp.id === f.id), data);
-    else state.copies.push({ id: uid(), added: Date.now(), ...data });
+    else {
+      const copy = { id: uid(), added: Date.now(), ...data };
+      if (f.photoBlob && await Photos.put(copy.id, f.photoBlob)) copy.photo = true;
+      state.copies.push(copy);
+    }
     recordSnapshot();
     toast(f.id ? "Copia aggiornata" : `${target.name} aggiunta alla collezione`);
     sheet.form = null;
@@ -1465,8 +1873,9 @@ document.addEventListener("click", async e => {
     const id = segBtn.dataset.seg, v = segBtn.dataset.value;
     if (id === "ed-filter") { ui.edFilter = v; render(); }
     else if (id === "sort-sets") { ui.sort = v; render(); }
-    else if (id === "welcome-ed") { state.settings.lang = v; state.settings.scanLang = v; scan.lang = null; Store.save(); document.querySelectorAll('[data-seg="welcome-ed"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
+    else if (id === "welcome-ed") { state.settings.lang = v; Store.save(); document.querySelectorAll('[data-seg="welcome-ed"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
     else if (id === "binder-filter") { ui.setView.filter = v; render(); }
+    else if (id === "binder-img") { ui.setView.img = v; render(); }
     else if (id === "browse-ed") { ui.browse.ed = v; render(); }
     else if (id === "search-ed") { ui.search.lang = v; if (ui.search.q) doSearch(); else render(); }
     else if (id === "scan-variant") { scan.variant = v; document.querySelectorAll('[data-seg="scan-variant"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
@@ -1493,11 +1902,12 @@ document.addEventListener("click", async e => {
     case "edit-copy": { const cp = state.copies.find(x => x.id === el.dataset.copy); sheet.form = { ...cp, grader: cp.grader || "PSA" }; drawSheet(); $("#copy-form")?.scrollIntoView({ block: "start" }); break; }
     case "delete-copy":
       if (!sheet.form.confirmDelete) { readForm(); sheet.form.confirmDelete = true; drawSheet(); break; }
-      state.copies = state.copies.filter(cp => cp.id !== el.dataset.copy); scan.session = scan.session.filter(cp => cp.id !== el.dataset.copy);
+      Photos.del(el.dataset.copy); state.copies = state.copies.filter(cp => cp.id !== el.dataset.copy); scan.session = scan.session.filter(cp => cp.id !== el.dataset.copy);
       recordSnapshot(); sheet.form = null; toast("Copia eliminata"); drawSheet(); break;
+    case "shutter": if (scan.paused) { toast("Riprendi la lettura per scattare"); break; } scan.capture = true; setScanStatus("Scatto…", "hit"); break;
     case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta: leggo il numero", ""); break;
-    case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Aggiunta automatica: ${scan.auto ? "sì" : "no"}`; break;
-    case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const l = scan.pending.lang; scan.pending = null; await addFromScan(b, l); break; }
+    case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Auto: ${scan.auto ? "sì" : "no"}`; break;
+    case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const { lang: l, ctx } = scan.pending; scan.pending = null; await addFromScan(b, l, ctx); break; }
     case "skip-pending": scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
     case "cycle-variant": {
       const c = state.copies.find(x => x.id === el.dataset.copy), card = cardOf(c);
@@ -1506,10 +1916,16 @@ document.addEventListener("click", async e => {
       recordSnapshot(); renderScanPanels(); break;
     }
     case "remove-copy": removeCopy(el.dataset.copy); break;
+    case "remove-photo": {
+      readForm(); const f = sheet.form;
+      if (f.id) { Photos.del(f.id); const cp = state.copies.find(x => x.id === f.id); if (cp) delete cp.photo; f.photo = false; Store.save(); }
+      f.photoBlob = null; drawSheet(); break;
+    }
     case "unlock-set": scan.lockSet = null; render(); break;
     case "scan-this-set": scan.lockSet = { id: el.dataset.set, name: el.dataset.name }; scan.lang = el.dataset.ed; findCache.clear(); ui.tab = "scan"; ui.setView = null; window.scrollTo(0, 0); render(); break;
     case "simulate": {
-      const pool = DEMO.cards.filter(c => (c.set.id === "SV2a") === (scan.lang === "ja") && (!scan.lockSet || c.set.id === scan.lockSet.id));
+      const simLang = scan.lang === "auto" ? (scan.lastLang ||= state.settings.lang) : scan.lang;
+      const pool = DEMO.cards.filter(c => (c.set.id === "SV2a") === (simLang === "ja") && (!scan.lockSet || c.set.id === scan.lockSet.id));
       const c = pool[Math.floor(Math.random() * pool.length)];
       if (!c) { toast("Nessuna carta di esempio per questa edizione"); break; }
       setScanStatus(`Letto ${cardNumber(c.localId, c.set.cardCount.official)}`, "hit");
@@ -1521,10 +1937,23 @@ document.addEventListener("click", async e => {
       const r = await refreshPrices((d, t) => { el.textContent = `Aggiorno ${d} di ${t}…`; });
       toast(r.ko ? `${r.ok} prezzi aggiornati, ${r.ko} non riusciti` : `${r.ok} prezzi aggiornati`); render(); break;
     }
-    case "backup":
-      if (await shareFile(`raccoglitore-tcg-${today()}.json`, JSON.stringify(state), "application/json")) { state.lastBackup = Date.now(); Store.save(); toast("Copia di sicurezza salvata"); if (!sheet) render(); }
+    case "backup": {
+      el.disabled = true; const label = el.textContent; el.textContent = "Preparo la copia…";
+      try {
+        if (await shareFile(`raccoglitore-tcg-${today()}.json`, await backupJSON(), "application/json")) { state.lastBackup = Date.now(); Store.save(); toast("Copia di sicurezza salvata"); if (!sheet && ui.tab !== "scan") render(); }
+      } finally { el.disabled = false; el.textContent = label; }
       break;
+    }
     case "open-settings": openSettings(); break;
+    case "restore-hist": {
+      const v = await History.get(el.dataset.key);
+      try {
+        const { state: clean } = sanitizeState(v?.data);
+        const before = state; state = clean; Store.save(); closeSheet();
+        toast(`Ripristinata la versione con ${state.copies.length} copie`, () => { state = before; Store.save(); render(); toast("Ripristino annullato"); });
+      } catch { toast("Questa versione non è leggibile"); }
+      break;
+    }
     case "show-welcome": openWelcome(); break;
     case "welcome-done": closeSheet(); break;
     case "dismiss-install": state.settings.installDismissed = true; Store.save(); render(); break;

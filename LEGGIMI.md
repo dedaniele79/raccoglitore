@@ -1,17 +1,18 @@
 # Raccoglitore TCG – web app per iPhone
 
-Versione 1.3 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
+Versione 1.4 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
 
 Web app per archiviare la collezione di carte Pokémon. Si apre da Safari e si aggiunge alla schermata Home: si comporta come un'app, non scade e non va reinstallata. Gli aggiornamenti arrivano da soli quando carichi i nuovi file su GitHub sopra i vecchi.
 
 ## Cosa fa
 
-- **Scansiona**: tieni le carte una dopo l'altra davanti alla fotocamera, senza toccare nulla. L'app legge il numero stampato (es. 025/165) e, se la carta è unica, la aggiunge da sola con edizione, variante e condizione scelte una volta per tutta la sessione. Se più carte hanno lo stesso numero, la scegli con un tocco; ogni aggiunta si può annullare o correggere dalla lista della sessione. Dal raccoglitore di un'espansione puoi scansionare solo le sue carte, così non ci sono dubbi.
+- **Scansiona** (1.4): legge il numero, riconosce la lingua della carta (italiano, inglese, francese, tedesco, spagnolo, portoghese, giapponese, coreano, cinese), controlla il nome e salva la foto di ogni carta. Pulsante bianco per scattare quando la carta non viene riconosciuta da sola.
+- **Scansione, dettagli**: tieni le carte una dopo l'altra davanti alla fotocamera, senza toccare nulla. L'app legge il numero stampato (es. 025/165) e, se la carta è unica, la aggiunge da sola con edizione, variante e condizione scelte una volta per tutta la sessione. Se più carte hanno lo stesso numero, la scegli con un tocco; ogni aggiunta si può annullare o correggere dalla lista della sessione. Dal raccoglitore di un'espansione puoi scansionare solo le sue carte, così non ci sono dubbi.
 - **Collezione**: come nei negozi, per edizione (IT, EN, JP, KR, CN), serie ed espansione con data d'uscita. Ogni espansione si apre come un raccoglitore a pagine da 9 tasche, con le mancanti in grigio.
 - **Valore**: trend Cardmarket in euro (via TCGdex), aggiornato da solo una volta al giorno, con coefficiente per lingua e valore personale per copia.
 - **Scambi**: una copia per carta, edizione e variante resta in collezione; le altre sono doppioni, esportabili in CSV.
 - **Cerca**: per nome, in 12 lingue.
-- **Copia di sicurezza**: salva e ripristina tutti i dati in un file.
+- **Copia di sicurezza**: salva e ripristina in un file tutte le carte, le impostazioni e le foto; promemoria dopo ogni sessione; versioni automatiche sul telefono (una all'ora, le ultime 30).
 
 ## Metterla online con GitHub Pages (gratis, una volta sola)
 
@@ -30,7 +31,7 @@ Web app per archiviare la collezione di carte Pokémon. Si apre da Safari e si a
 ## Sicurezza
 
 - Nessun account e nessun server: la collezione resta sull'iPhone, le immagini della fotocamera non escono dal telefono.
-- Il lettore del numero (cartella `ocr`, Tesseract.js) e i caratteri (cartella `fonts`) sono dentro l'app: nessun codice da altri siti, nessuna richiesta a Google.
+- Il lettore (cartella `ocr`, Tesseract.js con inglese, giapponese e coreano) e i caratteri (cartella `fonts`) sono dentro l'app: nessun codice da altri siti, nessuna richiesta a Google. Il riconoscimento delle carte avviene tutto sul telefono.
 - La pagina ha una Content-Security-Policy: può collegarsi solo al catalogo TCGdex ed eseguire solo il proprio codice.
 - Le copie di sicurezza vengono controllate prima del ripristino; il ripristino si può annullare per qualche secondo.
 
