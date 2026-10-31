@@ -1,6 +1,6 @@
 # Raccoglitore TCG – web app per iPhone
 
-Versione 1.6 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
+Versione 1.6.1 del 31 ottobre 2026. La guida completa è nel file `guida.html` (si apre anche dall'app, con il pulsante ? in alto a destra) e nel manuale PDF.
 
 Web app per archiviare la collezione di carte Pokémon. Si apre da Safari e si aggiunge alla schermata Home: si comporta come un'app, non scade e non va reinstallata. Gli aggiornamenti arrivano da soli quando carichi i nuovi file su GitHub sopra i vecchi.
 

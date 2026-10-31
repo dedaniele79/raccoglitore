@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IPZIJuGzfW1aVZ61ucF7jnA0gRRM3+GFlO1f2ZkoRxI=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ISNTWY8xdg/Bm90AzuLhX6TNKikgqi4Heq9YUedNgPw=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -81,6 +81,7 @@ button { -webkit-user-select: none; user-select: none; }
   padding-block: 10px 8px; display: flex; align-items: center; gap: 8px;
 }
 .top h1 { font-family: var(--font-display); font-weight: 800; font-size: 28px; line-height: 1.1; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top h1.small { font-size: 21px; line-height: 1.15; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 .icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface); box-shadow: var(--shadow); display: grid; place-items: center; cursor: pointer; flex: none; }
 .icon-btn svg { width: 22px; height: 22px; }
 a.icon-btn { color: inherit; text-decoration: none; }
@@ -101,8 +102,13 @@ a.icon-btn { color: inherit; text-decoration: none; }
 main {
   flex: 1; box-sizing: border-box; width: 100%; max-width: 760px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  padding-block: 4px calc(104px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; align-content: start;
+  padding-block: 4px calc(104px + env(safe-area-inset-bottom, 0px)); display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-content: start;
 }
+[hidden] { display: none !important; }
+/* Blocchi interni con titoli: stessa spaziatura della pagina (i titoli hanno il margine sotto negativo). */
+#sets-area, #scan-panels, #mine-results { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+#mine-results:empty { display: none; }
+.filters { display: grid; gap: 10px; min-width: 0; }
 
 /* Barra delle schede */
 .tabs {
@@ -157,7 +163,9 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; background: var(--rc, var(--muted)); }
 
 /* Selettori a pillole */
-.seg { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px; margin: -2px; min-width: 0; }
+.seg.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.seg.scroll.more { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
 .seg::-webkit-scrollbar { display: none; }
 .seg button { flex: none; border: 0; border-radius: 999px; padding: 8px 14px; min-height: 38px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
 .seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
@@ -208,7 +216,8 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 /* Dorso della carta, quando l'immagine non c'è */
 .back { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 8px; box-sizing: border-box; color: #fff;
   background: repeating-linear-gradient(45deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), radial-gradient(circle at 50% 45%, var(--back-1), var(--back-2)); }
-.back b { display: block; font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.back b { display: block; font-size: 12px; line-height: 1.2; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
+@media (max-width: 360px) { .back { padding: 6px 4px; } .back b { font-size: 10.5px; } }
 .back span { font-family: var(--font-mono); font-size: 11px; opacity: .85; }
 .foil .art::after { content: ""; position: absolute; inset: 0; background: var(--holo); mix-blend-mode: color-dodge; opacity: .22; pointer-events: none; }
 
@@ -227,16 +236,17 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .searchbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
 
 /* Scansione */
-.scanner { box-sizing: border-box; position: relative; border-radius: 22px; overflow: hidden; background: #05060f; aspect-ratio: 3 / 4; max-height: 52vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow); }
+.scanner { box-sizing: border-box; position: relative; border-radius: 22px; overflow: hidden; background: #05060f; aspect-ratio: 3 / 4; max-height: 60vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow); }
 .scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.scanner .frame { position: absolute; left: 50%; top: 50%; width: 66%; aspect-ratio: 245 / 337; transform: translate(-50%, -50%); border-radius: 14px; box-shadow: 0 0 0 999px rgba(5, 6, 15, .45); }
+/* La cornice sta tra la scritta in alto e i pulsanti in basso, così i pulsanti non coprono mai la zona del numero. */
+.scanner .frame { position: absolute; left: 50%; top: 58px; height: calc(100% - 136px); width: auto; max-width: 74%; aspect-ratio: 245 / 337; transform: translateX(-50%); border-radius: 14px; box-shadow: 0 0 0 999px rgba(5, 6, 15, .45); }
 .scanner .frame::before { content: ""; position: absolute; inset: 0; border-radius: 14px; border: 3px solid var(--frame); }
 .scanner .frame .numzone { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 15%; border-radius: 8px; border: 2px dashed rgba(255,255,255,.75); }
 .scanner.reading .frame::before { animation: pulse 1.2s ease-in-out infinite; }
 .scanner.hit .frame::before { border-color: var(--good); }
 @keyframes pulse { 50% { opacity: .45; } }
 @media (prefers-reduced-motion: reduce) { .scanner.reading .frame::before { animation: none; } }
-.scanner .status { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(5,6,15,.72); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 999px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
+.scanner .status { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(5,6,15,.72); color: #fff; font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 16px; width: max-content; max-width: calc(100% - 24px); text-align: center; line-height: 1.3; box-sizing: border-box; }
 .scanner .controls { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; gap: 8px; }
 .scanner .controls .btn { background: rgba(5,6,15,.72); color: #fff; box-shadow: none; }
 .scanner .controls .btn.gold { background: var(--gold); color: var(--gold-ink); }
@@ -295,7 +305,8 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .price-grid > div + div { border-left: 1px solid var(--line); }
 .price-grid .sub { font-size: 12px; }
 
-.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ink); color: var(--bg); padding: 10px 14px 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); }
+body:has(.sheet-wrap) .toast { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ink); color: var(--bg); padding: 10px 14px 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); }
 .toast button { border: 0; background: none; color: var(--gold); font-weight: 800; cursor: pointer; padding: 4px; }
 .spark { width: 100%; height: 64px; display: block; }
 .bars { display: grid; gap: 12px; padding: 14px; }
@@ -346,7 +357,7 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.6";
+const APP_VERSION = "1.6.1";
 const APP_DATE = "31 ottobre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
@@ -921,10 +932,19 @@ function ring(pct, color) {
   const r = 23, c = 2 * Math.PI * r;
   return `<div class="ring" aria-label="${Math.round(pct * 100)}% completato"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="6"/>${pct > 0.005 ? `<circle cx="27" cy="27" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(c * pct).toFixed(1)} ${c.toFixed(1)}"/>` : ""}</svg><b>${Math.round(pct * 100)}%</b></div>`;
 }
-function seg(id, options, selected) {
-  return `<div class="seg" role="group" id="${id}">${options.map(([v, label, extra]) => `<button type="button" data-seg="${id}" data-value="${esc(v)}" aria-pressed="${v === selected}">${label}${extra != null ? ` <span class="count">${extra}</span>` : ""}</button>`).join("")}</div>`;
+function seg(id, options, selected, scroll = false) {
+  return `<div class="seg${scroll ? " scroll" : ""}" role="group" id="${id}">${options.map(([v, label, extra]) => `<button type="button" data-seg="${id}" data-value="${esc(v)}" aria-pressed="${v === selected}">${label}${extra != null ? ` <span class="count">${extra}</span>` : ""}</button>`).join("")}</div>`;
 }
-function setHeader(title, back) { $("#title").textContent = title; $("#back").hidden = !back; }
+function setHeader(title, back) { $("#title").textContent = title; $("#back").hidden = !back; fitTitle(); }
+// Titolo lungo (es. «Tutte le espansioni» con la freccia indietro): carattere più piccolo e due righe, invece dei puntini.
+function fitTitle() { const h = $("#title"); if (!h) return; h.classList.remove("small"); if (h.scrollWidth > h.clientWidth + 1) h.classList.add("small"); }
+// Righe di pulsanti che scorrono di lato: sfumatura a destra finché c'è altro da vedere.
+function markScroll(el) { el.classList.toggle("more", el.scrollWidth > el.clientWidth + 2 && el.scrollLeft + el.clientWidth < el.scrollWidth - 2); }
+let markQueued = false;
+new MutationObserver(() => { if (markQueued) return; markQueued = true; requestAnimationFrame(() => { markQueued = false; document.querySelectorAll(".seg.scroll").forEach(markScroll); }); }).observe(document.body, { childList: true, subtree: true });
+document.addEventListener("scroll", e => { if (e.target.classList?.contains("scroll")) markScroll(e.target); }, true);
+addEventListener("resize", () => { fitTitle(); document.querySelectorAll(".seg.scroll").forEach(markScroll); });
+document.fonts?.ready.then(fitTitle);
 const previewBanner = () => online ? "" : `<div class="banner">Anteprima con carte e prezzi <b>di esempio</b>: qui il catalogo online è bloccato. Messa online, l'app usa il catalogo TCGdex con i prezzi Cardmarket.</div>`;
 
 function render() {
@@ -976,7 +996,7 @@ function renderCollection(banner) {
       <div class="stats"><span><b>${state.copies.length}</b> copie</span><span><b>${distinct}</b> carte</span><span><b>${all.length}</b> espansioni</span></div>
       ${valueDelta()}
     </div></section>
-    ${Family.list.length ? `<div class="coll-switch">${seg("coll-switch", [["me", "La mia"], ...Family.list.map(f => [f.id, esc(f.name)])], viewing?.id || "me")}</div>` : ""}
+    ${Family.list.length ? `<div class="coll-switch">${seg("coll-switch", [["me", "La mia"], ...Family.list.map(f => [f.id, esc(f.name)])], viewing?.id || "me", true)}</div>` : ""}
     ${viewing ? `<div class="quick"><button class="btn" data-action="browse">Tutte le espansioni</button><button class="btn ghost" data-action="family-exit">Torna alla tua</button></div>`
       : `<div class="quick"><button class="btn gold" data-tab="scan">Scansiona carte</button><button class="btn" data-action="browse">Tutte le espansioni</button><button class="btn ghost" data-action="share-mine">Condividi</button></div>`}
     ${viewing ? "" : notices()}`;
@@ -984,9 +1004,8 @@ function renderCollection(banner) {
     html += `<section class="panel empty"><h2>Il raccoglitore è vuoto</h2><p class="note">Inizia dalla scansione: inquadri le carte una dopo l'altra e l'app le archivia per edizione, serie ed espansione.</p></section>`;
     main.innerHTML = html; return;
   }
-  html += `<form class="searchbar" id="mine-form" role="search"><input id="mine-q" type="search" placeholder="${viewing ? "Cerca in questa collezione" : "Cerca nella tua collezione"}" value="${esc(ui.mineQ)}" aria-label="Cerca nella collezione" autocomplete="off" enterkeyhint="search"><button class="btn" type="submit">Cerca</button></form><div id="mine-results"></div><div id="sets-area">`;
-  if (eds.length > 1) html += seg("ed-filter", [["all", "Tutte", null], ...eds.map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`, all.filter(s => s.ed === e).length])], ui.edFilter);
-  html += `<div style="margin-top:10px">${seg("sort-sets", [["recent", "Più recenti"], ["value", "Valore"], ["completion", "Completamento"]], ui.sort)}</div>`;
+  html += `<form class="searchbar" id="mine-form" role="search"><input id="mine-q" type="search" placeholder="Cerca una carta" value="${esc(ui.mineQ)}" aria-label="Cerca nella collezione" autocomplete="off" enterkeyhint="search"><button class="btn" type="submit">Cerca</button></form><div id="mine-results"></div><div id="sets-area">`;
+  html += `<div class="filters">${eds.length > 1 ? seg("ed-filter", [["all", "Tutte", null], ...eds.map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`, all.filter(s => s.ed === e).length])], ui.edFilter) : ""}${seg("sort-sets", [["recent", "Più recenti"], ["value", "Valore"], ["completion", "Completamento"]], ui.sort)}</div>`;
   const tile = (s, ed) => {
     const pct = s.totalCards ? Math.min(1, s.distinct / s.totalCards) : 0;
     return `<button class="set-tile ${pct >= 1 ? "complete" : ""}" ${edStyle(ed)} data-action="open-set" data-set="${esc(s.setId)}" data-lang="${esc(s.catLang)}" data-ed="${esc(ed)}">
@@ -1113,7 +1132,7 @@ async function renderBinder(banner) {
 async function renderBrowse(banner) {
   const b = ui.browse;
   setHeader(b.serie ? "Serie " + b.serie.name : "Tutte le espansioni", true);
-  const edSeg = seg("browse-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), b.ed);
+  const edSeg = seg("browse-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), b.ed, true);
   main.innerHTML = banner + (b.serie ? "" : edSeg) + `<p class="note">Carico…</p>`;
   const lang = b.ed;
   try {
@@ -1767,12 +1786,12 @@ function renderScan(banner) {
       <p class="note scan-hint">Tieni la carta dentro la cornice gialla: l'app legge numero, lingua e nome e salva la foto. Se non la riconosce, tocca il pulsante bianco per scattare.</p>`}
     <section class="panel form session-bar" aria-label="Impostazioni della sessione">
       <div class="two">
-        <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang"><option value="auto" ${scan.lang === "auto" ? "selected" : ""}>Automatica (riconosce la lingua)</option>${langOptions(scan.lang)}</select></div>
+        <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang"><option value="auto" ${scan.lang === "auto" ? "selected" : ""}>Automatica</option>${langOptions(scan.lang)}</select></div>
         <div class="field"><label for="scan-cond">Condizione</label><select id="scan-cond">${CONDITIONS.map(([k, n]) => `<option value="${k}" ${k === scan.cond ? "selected" : ""}>${n}</option>`).join("")}</select></div>
       </div>
       <div class="field"><div class="label"><span>Variante</span><span>Auto: la riconosce l'app</span></div>${seg("scan-variant", variantOptions, scan.variant)}</div>
       ${scan.lockSet ? `<div class="check" style="justify-content:space-between"><span>Solo carte di <b>${esc(scan.lockSet.name)}</b></span><button class="btn small ghost" data-action="unlock-set">Togli</button></div>` : ""}
-      <form class="searchbar" id="manual-form"><input id="manual" placeholder="Oppure scrivi il numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" type="submit">Aggiungi</button></form>
+      <form class="searchbar" id="manual-form"><input id="manual" placeholder="Numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" type="submit">Aggiungi</button></form>
     </section>
     <div id="scan-panels"></div>`;
   $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); scan.votes.clear(); scanLangs().forEach(l => setIndex(l)); Store.save(); };
@@ -1810,13 +1829,11 @@ function customPanel(pend) {
     <p class="note">Il catalogo TCGdex non ha questa carta (succede spesso con le buste speciali cinesi e coreane). La archivio con ${pend.preview ? "la tua foto" : "i dati che scrivi"}; per il prezzo, dalla scheda della carta tocca «Collega a Cardmarket».</p>
     <div class="custom-grid">${pend.preview ? `<img class="copy-photo big" src="${esc(pend.preview)}" alt="La foto appena scattata">` : ""}
       <div class="grow" style="display:grid;gap:10px">
-        <div class="field"><label for="cu-name">Nome della carta</label><input id="cu-name" value="${esc(c.name)}" placeholder="es. Sawsbuck o 萌芽鹿" autocomplete="off"></div>
-        <div class="two">
-          <div class="field"><label for="cu-num">Numero</label><input id="cu-num" value="${esc(c.number ? c.number + (c.total ? "/" + String(c.total).padStart(2, "0") : "") : "")}" placeholder="es. 1807/07" autocomplete="off"></div>
-          <div class="field"><label for="cu-lang">Edizione</label><select id="cu-lang">${langOptions(c.lang)}</select></div>
-        </div>
-        <div class="field"><label for="cu-set">Espansione</label><select id="cu-set"><option value="altro">Carico le espansioni…</option></select></div>
+        <div class="field"><label for="cu-name">Nome della carta</label><input id="cu-name" value="${esc(c.name)}" placeholder="es. Sawsbuck" autocomplete="off"></div>
+        <div class="field"><label for="cu-num">Numero</label><input id="cu-num" value="${esc(c.number ? c.number + (c.total ? "/" + String(c.total).padStart(2, "0") : "") : "")}" placeholder="es. 1807/07" autocomplete="off"></div>
       </div></div>
+    <div class="field"><label for="cu-lang">Edizione</label><select id="cu-lang">${langOptions(c.lang)}</select></div>
+    <div class="field"><label for="cu-set">Espansione</label><select id="cu-set"><option value="altro">Carico le espansioni…</option></select></div>
     <button class="btn gold" data-action="custom-add">${pend.preview ? "Aggiungi con la foto" : "Aggiungi alla collezione"}</button>
   </section>`;
 }
@@ -2004,7 +2021,7 @@ function openWelcome() {
   const showInstall = isIOS && !isStandalone() && !isPreview;
   openPanel("Benvenuto", `
     <div class="welcome-hero"><h3>Il tuo raccoglitore di carte Pokémon</h3><p style="margin:0">Scansioni le carte, l'app le archivia per edizione, serie ed espansione e ti dice quanto valgono su Cardmarket.</p></div>
-    <div class="field"><div class="label">Quale edizione collezioni di più?</div>${seg("welcome-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), state.settings.lang)}</div>
+    <div class="field"><div class="label">Quale edizione collezioni di più?</div>${seg("welcome-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), state.settings.lang, true)}</div>
     <ol class="steps">
       <li><div><b>Scansiona</b><span class="sub">Tocca il pulsante giallo e tieni le carte una dopo l'altra nella cornice, con il numero (es. 025/165) nel riquadro in basso. Le carte si aggiungono da sole.</span></div></li>
       <li><div><b>Sfoglia il raccoglitore</b><span class="sub">Ogni espansione è un raccoglitore da 9 tasche: le carte che hai sono a colori, le mancanti in grigio.</span></div></li>
@@ -2069,7 +2086,7 @@ function renderSearch(banner) {
   s.lang ||= state.settings.lang;
   main.innerHTML = banner + `
     <form class="searchbar" id="search-form"><input id="q" type="search" placeholder="Nome della carta, es. Pikachu" value="${esc(s.q)}" aria-label="Nome della carta" enterkeyhint="search"><button class="btn primary" type="submit">Cerca</button></form>
-    ${seg("search-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), s.lang)}
+    ${seg("search-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), s.lang, true)}
     ${s.msg ? `<p class="note">${esc(s.msg)}</p>` : ""}
     <div class="grid-cards">${s.results.map(b => `<button class="pocket" data-action="open-card" data-id="${esc(b.id)}" data-lang="${esc(s.usedLang || s.lang)}" data-ed="${esc(s.usedLang || s.lang)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label num">${esc(b.id)}</span></button>`).join("")}</div>`;
   $("#search-form").onsubmit = e => { e.preventDefault(); s.q = $("#q").value.trim(); doSearch(); };
@@ -2153,7 +2170,7 @@ function drawSheet() {
 // Pannello di collegamento a Cardmarket dentro la scheda della carta.
 function cmPanel() {
   const m = sheet.cm;
-  const rows = (m.results || []).map(h => `<button class="row" data-action="cm-pick" data-cm="${h.id}"><div class="grow"><b>${esc(h.name)}</b><div class="sub">${esc(h.expName || "Espansione " + h.exp)}${h.expDate ? " · " + esc(itDate(h.expDate)) : ""}${h.ver ? ` · <b>versione ${h.ver} di ${h.vers}</b>` : ""}</div></div><span class="euro">${euro(h.p ? (h.p[0] || h.p[3] || h.p[5] || null) : null)}</span></button>`).join("");
+  const rows = (m.results || []).map(h => `<button class="row" data-action="cm-pick" data-cm="${h.id}"><div class="grow"><b>${esc(h.name)}</b><div class="sub">${esc(h.expName || "Espansione " + h.exp)}${h.expDate ? " · " + esc(itDate(h.expDate)) : ""}${h.ver ? ` · <b style="white-space:nowrap">versione ${h.ver} di ${h.vers}</b>` : ""}</div></div><span class="euro">${euro(h.p ? (h.p[0] || h.p[3] || h.p[5] || null) : null)}</span></button>`).join("");
   return `<section class="panel form cm-panel" aria-label="Collega a Cardmarket">
     <b>Collega a Cardmarket</b>
     <p class="note">Cerca la carta com'è scritta su Cardmarket, in inglese (es. Sawsbuck). Ogni riga è un prodotto Cardmarket con il suo prezzo di oggi: scegli quello della tua carta (stessa espansione e stesso prezzo che vedi sul sito). Se la stessa carta ha più versioni, di solito la rara è quella che costa di più.</p>
@@ -2193,7 +2210,7 @@ function copyForm(c) {
   const price = marketPrice(c, f.variant);
   return `<form class="panel form" id="copy-form">
     <b style="font-family:var(--font-display);font-size:20px">${f.id ? "Modifica la copia" : "Nuova copia"}</b>
-    <div class="field"><div class="label">Edizione</div>${seg("f-lang", LANGS.filter(l => l.region === region).map(l => [l.code, l.short]), f.lang)}</div>
+    <div class="field"><div class="label">Edizione</div>${seg("f-lang", LANGS.filter(l => l.region === region).map(l => [l.code, l.short]), f.lang, true)}</div>
     <div class="field"><div class="label">Variante</div>${seg("f-variant", variants, f.variant)}</div>
     <div class="field"><div class="label">Condizione</div>${seg("f-cond", CONDITIONS.map(([k]) => [k, k]), f.cond)}</div>
     ${sameKey ? `<p class="note warn">Ne hai già ${sameKey} uguale: se questa non è in condizione migliore finirà tra i doppioni.</p>` : ""}
