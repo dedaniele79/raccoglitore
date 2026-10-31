@@ -1,0 +1,1652 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-SETnNpC2s5dYNyNDDmEKaRXw8baDP+ox4DjMvRR6O1c='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self'; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Raccoglitore">
+<meta name="theme-color" content="#f2f3fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0f22" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Raccoglitore TCG</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: schede con barra in basso e pulsante Scansiona al centro; edizione → serie → espansione; ogni espansione è un raccoglitore a tasche 3×3 */
+:root {
+  --bg: #f2f3fa;
+  --surface: #ffffff;
+  --sunk: #e8eaf5;
+  --ink: #161a33;
+  --muted: #5c6286;
+  --line: #dcdff0;
+  --accent: #3b4cca;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3e6fb;
+  --gold: #f5b800;
+  --gold-ink: #2a1f00;
+  --frame: #f7c724;
+  --good: #1f9d5c;
+  --warn: #c66a00;
+  --bad: #d23f45;
+  --e-it: #1f9d5c; --e-en: #2f7de1; --e-ja: #e0454b; --e-ko: #8a52d6; --e-zh: #c99300; --e-other: #6b7196;
+  --back-1: #263a9c; --back-2: #1a2670;
+  --shadow: 0 1px 2px rgba(22, 26, 51, .06), 0 6px 18px rgba(22, 26, 51, .07);
+  --holo: linear-gradient(115deg, #7fd3ff 0%, #b49bff 22%, #ff9ad5 42%, #ffe48a 62%, #8ff0c4 80%, #7fd3ff 100%);
+  --font-display: "Baloo 2", "Avenir Next Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --font-body: "Nunito", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0f22; --surface: #161a36; --sunk: #10132a; --ink: #eef0ff; --muted: #9ba1c9; --line: #272c53;
+    --accent: #8d98ff; --accent-ink: #0c0f22; --accent-soft: #232a5c; --gold: #ffd23f; --gold-ink: #2a1f00; --frame: #e7b912;
+    --good: #45d18a; --warn: #f2a23c; --bad: #ff7a7f;
+    --e-it: #45d18a; --e-en: #5aa0ff; --e-ja: #ff6b70; --e-ko: #b48cff; --e-zh: #f2c230; --e-other: #9ba1c9;
+    --back-1: #2a3fae; --back-2: #141c56;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c0f22; --surface: #161a36; --sunk: #10132a; --ink: #eef0ff; --muted: #9ba1c9; --line: #272c53;
+  --accent: #8d98ff; --accent-ink: #0c0f22; --accent-soft: #232a5c; --gold: #ffd23f; --gold-ink: #2a1f00; --frame: #e7b912;
+  --good: #45d18a; --warn: #f2a23c; --bad: #ff7a7f;
+  --e-it: #45d18a; --e-en: #5aa0ff; --e-ja: #ff6b70; --e-ko: #b48cff; --e-zh: #f2c230; --e-other: #9ba1c9;
+  --back-1: #2a3fae; --back-2: #141c56;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; -webkit-tap-highlight-color: transparent; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { -webkit-user-select: none; user-select: none; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
+
+.app { display: flex; flex-direction: column; min-height: 100%; }
+.top {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 8px; display: flex; align-items: center; gap: 8px;
+}
+.top h1 { font-family: var(--font-display); font-weight: 800; font-size: 28px; line-height: 1.1; margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--surface); box-shadow: var(--shadow); display: grid; place-items: center; cursor: pointer; flex: none; }
+.icon-btn svg { width: 22px; height: 22px; }
+a.icon-btn { color: inherit; text-decoration: none; }
+.top .actions { display: flex; gap: 8px; flex: none; }
+.notice { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow), inset 4px 0 0 var(--gold); }
+.notice .grow b { display: block; }
+.steps { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.steps li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; counter-increment: step; }
+.steps li::before { content: counter(step); width: 36px; height: 36px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); font-family: var(--font-display); font-weight: 800; font-size: 18px; display: grid; place-items: center; }
+.steps b { display: block; }
+.welcome-hero { border-radius: 18px; padding: 18px; color: #fff; background: radial-gradient(120% 90% at 100% 0%, #5468ff 0%, #2a3aa8 45%, #19226b 100%); position: relative; overflow: hidden; }
+.welcome-hero::after { content: ""; position: absolute; inset: 0; background: var(--holo); mix-blend-mode: soft-light; opacity: .55; pointer-events: none; }
+.welcome-hero > * { position: relative; z-index: 1; }
+.welcome-hero h3 { font-family: var(--font-display); font-size: 26px; line-height: 1.1; margin: 0 0 6px; }
+.quickadd { display: grid; gap: 10px; padding: 14px; }
+.quickadd .btn-row .btn { flex: 1 1 30%; }
+.meta-line { font-size: 12px; color: var(--muted); text-align: center; }
+main {
+  flex: 1; box-sizing: border-box; width: 100%; max-width: 760px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 4px calc(104px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px; align-content: start;
+}
+
+/* Barra delle schede */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; display: grid; grid-template-columns: repeat(5, 1fr); align-items: end;
+  background: var(--surface); box-shadow: 0 -1px 0 var(--line), 0 -8px 24px rgba(0,0,0,.06);
+  padding-bottom: env(safe-area-inset-bottom, 0px); padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px);
+}
+.tabs button { border: 0; background: none; padding: 9px 2px 8px; display: grid; justify-items: center; gap: 3px; font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; min-height: 56px; }
+.tabs button svg { width: 24px; height: 24px; }
+.tabs button[aria-current="page"] { color: var(--accent); }
+.tabs .scan-tab .fab {
+  width: 60px; height: 60px; margin-top: -26px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--gold); color: var(--gold-ink); box-shadow: 0 0 0 5px var(--surface), 0 6px 16px rgba(245, 184, 0, .45);
+}
+.tabs .scan-tab .fab svg { width: 30px; height: 30px; }
+.tabs .scan-tab[aria-current="page"] { color: var(--ink); }
+
+/* Elementi comuni */
+.banner { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.section-title { font-family: var(--font-display); font-weight: 800; font-size: 21px; margin: 4px 2px -6px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
+.section-title small { font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--muted); }
+.row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; min-width: 0; min-height: 44px; box-sizing: border-box; }
+.row + .row { border-top: 1px solid var(--line); }
+button.row, a.row { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; color: inherit; text-decoration: none; }
+.grow { flex: 1; min-width: 0; }
+.name { font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sub { color: var(--muted); font-size: 13px; }
+.num { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 500; }
+.euro { font-variant-numeric: tabular-nums; font-weight: 800; white-space: nowrap; }
+.chev { color: var(--muted); font-size: 20px; line-height: 1; }
+.note { font-size: 13px; color: var(--muted); margin: 0; }
+.note.warn { color: var(--warn); font-weight: 700; }
+.empty { text-align: center; padding: 28px 18px; display: grid; gap: 10px; justify-items: center; }
+.empty h2 { font-family: var(--font-display); margin: 0; font-size: 22px; }
+
+.btn { border: 0; background: var(--surface); box-shadow: var(--shadow); border-radius: 999px; padding: 10px 18px; font-weight: 800; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+.btn.gold { background: var(--gold); color: var(--gold-ink); }
+.btn.ghost { background: transparent; box-shadow: inset 0 0 0 1.5px var(--line); }
+.btn.small { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--sunk); color: var(--muted); white-space: nowrap; }
+.chip.dup { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.chip.grade { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+.chip.example { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+.chip.ed { background: color-mix(in srgb, var(--rc) 16%, transparent); color: var(--rc); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex: none; background: var(--rc, var(--muted)); }
+
+/* Selettori a pillole */
+.seg { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+.seg::-webkit-scrollbar { display: none; }
+.seg button { flex: none; border: 0; border-radius: 999px; padding: 8px 14px; min-height: 38px; background: var(--surface); box-shadow: inset 0 0 0 1.5px var(--line); font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); box-shadow: none; }
+.seg button .count { font-size: 12px; opacity: .7; }
+
+/* Carta "trofeo" del riepilogo */
+.trophy { position: relative; border-radius: 22px; padding: 7px; background: var(--frame); box-shadow: var(--shadow), 0 10px 30px color-mix(in srgb, var(--frame) 30%, transparent); }
+.trophy-inner { position: relative; border-radius: 16px; padding: 16px 16px 14px; overflow: hidden; background: radial-gradient(120% 90% at 100% 0%, #5468ff 0%, #2a3aa8 45%, #19226b 100%); color: #fff; }
+.trophy-inner::after { content: ""; position: absolute; inset: 0; background: var(--holo); mix-blend-mode: soft-light; opacity: .55; pointer-events: none; }
+.trophy-inner > * { position: relative; z-index: 1; }
+.trophy .eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+.trophy .big { font-family: var(--font-display); font-weight: 800; font-size: 44px; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.trophy .stats { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 14px; }
+.trophy .stats b { font-variant-numeric: tabular-nums; font-size: 17px; }
+.trophy .delta { display: inline-block; font-weight: 800; font-size: 13px; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,.18); margin-top: 8px; }
+.trophy .spark { margin-top: 8px; }
+
+.quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.quick .btn { width: 100%; }
+
+/* Espansioni */
+.serie-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 2px -6px; font-weight: 800; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .07em; }
+.set-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 10px; }
+.set-tile { display: flex; gap: 12px; align-items: center; padding: 12px 12px 12px 16px; border: 0; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; cursor: pointer; width: 100%; min-width: 0; color: inherit; position: relative; overflow: hidden; }
+.set-tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--rc, var(--accent)); }
+.set-tile.complete::after { content: ""; position: absolute; inset: 0; background: var(--holo); opacity: .14; pointer-events: none; }
+.ring { width: 54px; height: 54px; flex: none; position: relative; display: grid; place-items: center; }
+.ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ring b { font-size: 13px; font-variant-numeric: tabular-nums; }
+
+/* Raccoglitore */
+.binder-head { padding: 14px; display: grid; gap: 10px; }
+.bar { height: 10px; border-radius: 5px; background: var(--sunk); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: var(--rc, var(--accent)); border-radius: 5px; }
+.bar.full > span { background: var(--holo); }
+.binder { display: grid; gap: 14px; }
+.page { background: linear-gradient(180deg, var(--surface), var(--sunk)); border-radius: 18px; padding: 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; box-shadow: var(--shadow); }
+.page-label { grid-column: 1 / -1; font-size: 11px; font-weight: 800; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; display: flex; justify-content: space-between; }
+.pocket { position: relative; border: 0; padding: 0; background: none; cursor: pointer; display: grid; gap: 4px; min-width: 0; color: inherit; }
+.art { aspect-ratio: 245 / 337; max-width: 100%; border-radius: 7px; overflow: hidden; position: relative; background: var(--sunk); }
+.art img { position: relative; width: 100%; height: 100%; object-fit: cover; display: block; }
+.pocket.owned .art { box-shadow: 0 0 0 2px var(--frame), 0 4px 10px rgba(0,0,0,.15); }
+.pocket.missing .art { opacity: .55; }
+.pocket.missing .art img { filter: grayscale(1) brightness(1.05); opacity: .45; }
+.pocket .count { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; display: grid; place-items: center; background: var(--good); color: #fff; font-size: 12px; font-weight: 800; border-radius: 11px; padding: 0 5px; box-sizing: border-box; box-shadow: 0 0 0 2px var(--surface); z-index: 1; }
+.pocket .label { font-size: 11px; color: var(--muted); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pocket .label.name-l { color: var(--ink); font-weight: 700; }
+/* Dorso della carta, quando l'immagine non c'è */
+.back { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 8px; box-sizing: border-box; color: #fff;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.07) 0 6px, transparent 6px 12px), radial-gradient(circle at 50% 45%, var(--back-1), var(--back-2)); }
+.back b { display: block; font-size: 12px; line-height: 1.2; overflow-wrap: anywhere; }
+.back span { font-family: var(--font-mono); font-size: 11px; opacity: .85; }
+.foil .art::after { content: ""; position: absolute; inset: 0; background: var(--holo); mix-blend-mode: color-dodge; opacity: .22; pointer-events: none; }
+
+.grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+
+/* Moduli */
+.form { display: grid; gap: 14px; padding: 16px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field > label, .field > .label { font-size: 13px; font-weight: 700; color: var(--muted); }
+.field input, .field select, .field textarea, .searchbar input {
+  border: 0; box-shadow: inset 0 0 0 1.5px var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; width: 100%; box-sizing: border-box; min-width: 0; min-height: 44px;
+}
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.check { display: flex; gap: 10px; align-items: center; font-weight: 700; min-height: 44px; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+.searchbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+
+/* Scansione */
+.scanner { position: relative; border-radius: 22px; overflow: hidden; background: #05060f; aspect-ratio: 3 / 4; max-height: 52vh; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow); }
+.scanner video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.scanner .frame { position: absolute; left: 50%; top: 50%; width: 66%; aspect-ratio: 245 / 337; transform: translate(-50%, -50%); border-radius: 14px; box-shadow: 0 0 0 999px rgba(5, 6, 15, .45); }
+.scanner .frame::before { content: ""; position: absolute; inset: 0; border-radius: 14px; border: 3px solid var(--frame); }
+.scanner .frame .numzone { position: absolute; left: 6px; right: 6px; bottom: 6px; height: 15%; border-radius: 8px; border: 2px dashed rgba(255,255,255,.75); }
+.scanner.reading .frame::before { animation: pulse 1.2s ease-in-out infinite; }
+.scanner.hit .frame::before { border-color: var(--good); }
+@keyframes pulse { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .scanner.reading .frame::before { animation: none; } }
+.scanner .status { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: rgba(5,6,15,.72); color: #fff; font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 999px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; }
+.scanner .controls { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; gap: 8px; }
+.scanner .controls .btn { background: rgba(5,6,15,.72); color: #fff; box-shadow: none; }
+.scanner .controls .btn.gold { background: var(--gold); color: var(--gold-ink); }
+.scanner .demo-cam { position: absolute; inset: 0; background: radial-gradient(60% 50% at 50% 50%, #3a3f5c 0%, #15182b 70%), #15182b; }
+.scanner .demo-cam::after { content: ""; position: absolute; left: 50%; top: 50%; width: 60%; aspect-ratio: 245 / 337; transform: translate(-50%, -50%) rotate(-2deg); border-radius: 10px; background: linear-gradient(160deg, #f7c724 0 6%, #e8edf7 6% 94%, #f7c724 94%); box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: .9; }
+.scanner.off { display: grid; place-items: center; color: #cfd5f5; padding: 24px; text-align: center; aspect-ratio: 4 / 3; }
+.scanner.off .inner { display: grid; gap: 12px; justify-items: center; }
+.session-bar .field > .label { display: flex; justify-content: space-between; gap: 8px; }
+.picker { padding: 14px; display: grid; gap: 10px; box-shadow: var(--shadow), inset 0 0 0 2px var(--gold); }
+.picker .options { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+.tray-item { display: flex; gap: 12px; align-items: center; padding: 10px 12px; min-width: 0; }
+.tray-item + .tray-item { border-top: 1px solid var(--line); }
+.tray-item .thumb { width: 46px; flex: none; }
+.tray-item.new { animation: flash 1.2s ease-out; }
+@keyframes flash { from { background: color-mix(in srgb, var(--gold) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .tray-item.new { animation: none; } }
+.tray-actions { display: flex; gap: 6px; flex: none; }
+
+/* Scheda carta */
+.sheet-wrap { position: fixed; inset: 0; z-index: 20; background: rgba(5, 6, 15, .55); display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  background: var(--bg); width: 100%; max-width: 640px; max-height: 94%; overflow-y: auto; border-radius: 24px 24px 0 0; box-sizing: border-box;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 10px calc(28px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 16px;
+}
+.grab { width: 44px; height: 5px; border-radius: 3px; background: var(--line); justify-self: center; }
+.sheet-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sheet-head h2 { font-family: var(--font-display); font-size: 26px; line-height: 1.1; margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.card-hero { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.showcase { border-radius: 12px; padding: 5px; background: var(--frame); box-shadow: var(--shadow); }
+.showcase .art { border-radius: 8px; }
+.price-big { font-family: var(--font-display); font-weight: 800; font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; font-size: 14px; margin: 0; }
+.kv dt { color: var(--muted); font-weight: 700; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.price-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.price-grid > div { padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.price-grid > div + div { border-left: 1px solid var(--line); }
+.price-grid .sub { font-size: 12px; }
+
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 30; background: var(--ink); color: var(--bg); padding: 10px 14px 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 700; max-width: calc(100% - 32px); box-sizing: border-box; display: flex; gap: 12px; align-items: center; box-shadow: var(--shadow); }
+.toast button { border: 0; background: none; color: var(--gold); font-weight: 800; cursor: pointer; padding: 4px; }
+.spark { width: 100%; height: 64px; display: block; }
+.bars { display: grid; gap: 12px; padding: 14px; }
+.bars .line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.bars .track { grid-column: 1 / -1; height: 10px; border-radius: 5px; background: var(--sunk); overflow: hidden; }
+.bars .track span { display: block; height: 100%; background: var(--rc); border-radius: 5px; }
+.hscroll { display: grid; grid-auto-flow: column; grid-auto-columns: 112px; gap: 12px; overflow-x: auto; padding: 8px 4px 8px; scrollbar-width: none; }
+.hscroll::-webkit-scrollbar { display: none; }
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+@media (max-width: 380px) { .two { grid-template-columns: 1fr; } .card-hero { grid-template-columns: 110px minmax(0, 1fr); } .trophy .big { font-size: 38px; } }
+</style>
+
+<div class="app">
+  <header class="top"><button class="icon-btn" id="back" hidden aria-label="Indietro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg></button><h1 id="title">Collezione</h1><div class="actions"><a class="icon-btn" id="help-btn" href="guida.html" target="_blank" rel="noopener" aria-label="Guida all'uso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.8"/><circle cx="12" cy="17.2" r=".6" fill="currentColor"/></svg></a><button class="icon-btn" id="settings-btn" aria-label="Impostazioni"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
+  <main id="main"></main>
+  <nav class="tabs" aria-label="Sezioni">
+    <button data-tab="collection" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="3.5" width="7" height="9" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="9" rx="1.8"/><rect x="3.5" y="15" width="7" height="5.5" rx="1.8"/><rect x="13.5" y="15" width="7" height="5.5" rx="1.8"/></svg>Collezione</button>
+    <button data-tab="value"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 18l5-6 4 3 7-9"/><path d="M15 6h5v5"/></svg>Valore</button>
+    <button data-tab="scan" class="scan-tab"><span class="fab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><rect x="8.5" y="7" width="7" height="10" rx="1.4"/></svg></span>Scansiona</button>
+    <button data-tab="trades"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></svg>Scambi</button>
+    <button data-tab="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>Cerca</button>
+  </nav>
+</div>
+<div id="sheet-root"></div>
+<div id="toast-root" aria-live="polite"></div>
+
+<script>
+"use strict";
+// ================================================================ Dati fissi
+// L'edizione è la lingua di stampa: IT, EN, JP, KR, CN… come nei negozi. Le edizioni occidentali condividono le espansioni.
+const LANGS = [
+  ["it","Italiano","IT","intl","it"],["en","Inglese","EN","intl","en"],["fr","Francese","FR","intl","other"],["de","Tedesco","DE","intl","other"],
+  ["es","Spagnolo","ES","intl","other"],["pt","Portoghese","PT","intl","other"],["ja","Giapponese","JP","jp","ja"],["ko","Coreano","KR","kr","ko"],
+  ["zh-cn","Cinese semplificato","CN","cn","zh"],["zh-tw","Cinese tradizionale","TW","cn","zh"],["th","Thailandese","TH","sea","other"],["id","Indonesiano","ID","sea","other"]
+].map(([code,name,short,region,color]) => ({code,name,short,region,color}));
+const LANG = Object.fromEntries(LANGS.map(l => [l.code, l]));
+const EDITION_ORDER = ["it","en","ja","ko","zh-cn","zh-tw","fr","de","es","pt","th","id"];
+const VARIANTS = { normal: "Normale", reverse: "Reverse", holo: "Holo", firstEdition: "1ª ed." };
+const CONDITIONS = [["MT","Mint"],["NM","Near Mint"],["EX","Excellent"],["GD","Good"],["LP","Light Played"],["PL","Played"],["PO","Poor"]];
+const GRADERS = ["PSA","BGS","CGC","SGC","Altro"];
+const RARITY_IT = {
+  "common": "Comune", "uncommon": "Non comune", "rare": "Rara", "rare holo": "Rara holo", "holo rare": "Rara holo",
+  "double rare": "Doppia rara", "ultra rare": "Ultra rara", "illustration rare": "Rara illustrazione",
+  "special illustration rare": "Rara illustrazione speciale", "hyper rare": "Iper rara", "shiny rare": "Rara cromatica",
+  "shiny ultra rare": "Ultra rara cromatica", "ace spec rare": "Rara ACE SPEC", "secret rare": "Rara segreta", "promo": "Promo",
+  "amazing rare": "Rara straordinaria", "radiant rare": "Rara radiosa", "rare holo v": "Rara holo V", "rare holo vmax": "Rara holo VMAX",
+  "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
+  "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
+};
+const APP_VERSION = "1.3";
+const APP_DATE = "31 ottobre 2026";
+const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
+const API = "https://api.tcgdex.net/v2";
+// Lettore del numero (Tesseract.js 5.1.1): i file sono nella cartella ocr/ dell'app, non su server di terzi.
+const OCR_DIR = new URL("ocr/", location.href).href;
+
+const fallbackLang = code => LANG[code]?.region === "intl" ? "en" : code;
+const regionOf = code => LANG[code]?.region || "intl";
+const edColor = code => `var(--e-${LANG[code]?.color || "other"})`;
+const edStyle = code => `style="--rc:${edColor(code)}"`;
+const edName = code => LANG[code]?.name || code;
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const euro = v => v == null || isNaN(v) ? "—" : new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(v);
+const today = () => new Date().toISOString().slice(0, 10);
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+const itDate = d => d ? new Date(d + "T12:00:00").toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) : "";
+const rarityIt = r => RARITY_IT[String(r || "").toLowerCase()] || r || "";
+// Numero come stampato: 006/165 (zeri a sinistra quando il numero è solo cifre)
+function cardNumber(localId, official) {
+  const id = String(localId ?? "");
+  if (!official) return id;
+  const w = Math.max(3, String(official).length);
+  return `${/^\d+$/.test(id) ? id.padStart(w, "0") : id}/${String(official).padStart(w, "0")}`;
+}
+
+// ================================================================ Stato e salvataggio sul telefono (IndexedDB)
+let state = { cards: {}, sets: {}, copies: [], snapshots: [], settings: { lang: "it", cond: "NM", coef: {} }, lastRefresh: 0 };
+const Store = {
+  db: null,
+  open() {
+    return new Promise(resolve => {
+      try {
+        const req = indexedDB.open("raccoglitore-tcg", 1);
+        req.onupgradeneeded = () => req.result.createObjectStore("kv");
+        req.onsuccess = () => { this.db = req.result; resolve(); };
+        req.onerror = () => resolve();
+      } catch { resolve(); }
+    });
+  },
+  async load() {
+    await this.open();
+    if (!this.db) { try { const raw = localStorage.getItem("raccoglitore-tcg"); return raw ? JSON.parse(raw) : null; } catch { return null; } }
+    return new Promise(resolve => {
+      try {
+        const r = this.db.transaction("kv").objectStore("kv").get("state");
+        r.onsuccess = () => resolve(r.result || null);
+        r.onerror = () => resolve(null);
+      } catch { resolve(null); }
+    });
+  },
+  keep(name, data) {
+    try { if (this.db) this.db.transaction("kv", "readwrite").objectStore("kv").put(data, name); } catch {}
+  },
+  timer: null,
+  save() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      const data = JSON.parse(JSON.stringify(state));
+      try {
+        if (this.db) this.db.transaction("kv", "readwrite").objectStore("kv").put(data, "state");
+        else localStorage.setItem("raccoglitore-tcg", JSON.stringify(data));
+      } catch (e) { console.warn("Salvataggio non riuscito", e); }
+    }, 250);
+  }
+};
+
+// ================================================================ Controllo dei dati
+// Una copia di sicurezza è un file che arriva da fuori: la collezione viene ricostruita campo per campo,
+// tenendo solo tipi e valori previsti. Testi troppo lunghi vengono accorciati, indirizzi di immagini estranei scartati.
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const ASSET_RE = /^https:\/\/assets\.tcgdex\.net\/[A-Za-z0-9._\-\/]{1,200}$/;
+const COND_CODES = CONDITIONS.map(([c]) => c);
+const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const isObj = o => !!o && typeof o === "object" && !Array.isArray(o);
+const txt = (v, max) => (typeof v === "string" || typeof v === "number") ? String(v).replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").slice(0, max) : "";
+const numIn = (v, min, max) => {
+  const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v.trim().replace(",", ".")) : NaN;
+  return Number.isFinite(n) && n >= min && n <= max ? n : null;
+};
+const langOk = v => typeof v === "string" && own(LANG, v) ? v : null;
+
+function cleanCard(c) {
+  if (!isObj(c)) return null;
+  const lang = langOk(c.lang), id = txt(c.id, 100);
+  if (!lang || !id) return null;
+  const v = isObj(c.variants) ? c.variants : {};
+  const variants = { normal: v.normal === true, reverse: v.reverse === true, holo: v.holo === true, firstEdition: v.firstEdition === true };
+  if (!Object.values(variants).some(Boolean)) variants.normal = true;
+  const cm = isObj(c.cm) ? c.cm : {};
+  const price = k => numIn(cm[k], 0, 1e6);
+  return {
+    key: `${lang}|${id}`, id, lang, name: txt(c.name, 120), localId: txt(c.localId, 20), setId: txt(c.setId, 60), setName: txt(c.setName, 120),
+    official: numIn(c.official, 0, 5000) ?? 0, rarity: txt(c.rarity, 60), illustrator: txt(c.illustrator, 80),
+    image: ASSET_RE.test(c.image) ? c.image : "", variants, example: c.example === true,
+    cm: { trend: price("trend"), avg30: price("avg30"), low: price("low"), trendHolo: price("trendHolo"), avg30Holo: price("avg30Holo"),
+          lowHolo: price("lowHolo"), updated: DATE_RE.test(cm.updated) ? cm.updated : null },
+    fetched: numIn(c.fetched, 0, 1e14) ?? 0
+  };
+}
+function cleanSet(s) {
+  if (!isObj(s)) return null;
+  const lang = langOk(s.lang), id = txt(s.id, 60);
+  if (!lang || !id) return null;
+  return {
+    key: `${lang}|${id}`, id, lang, name: txt(s.name, 120), serieId: txt(s.serieId, 60) || "altro", serieName: txt(s.serieName, 120) || "Altro",
+    release: DATE_RE.test(s.release) ? s.release : "", official: numIn(s.official, 0, 5000) ?? 0, total: numIn(s.total, 0, 5000) ?? 0,
+    logo: ASSET_RE.test(s.logo) ? s.logo : "", fetched: numIn(s.fetched, 0, 1e14) ?? 0
+  };
+}
+function cleanCopy(c, cards, seen) {
+  if (!isObj(c)) return null;
+  const cardKey = txt(c.cardKey, 120);
+  if (!own(cards, cardKey)) return null;
+  let id = txt(c.id, 100);
+  if (!id || seen.has(id)) id = uid();
+  seen.add(id);
+  const graded = c.graded === true;
+  const copy = {
+    id, added: numIn(c.added, 0, 1e14) ?? Date.now(), cardKey, lang: langOk(c.lang) || cards[cardKey].lang,
+    variant: own(VARIANTS, c.variant) ? c.variant : "normal", cond: COND_CODES.includes(c.cond) ? c.cond : "NM",
+    graded, grader: GRADERS.includes(c.grader) ? c.grader : null, grade: txt(c.grade, 10) || null,
+    purchase: numIn(c.purchase, 0, 1e7), personal: numIn(c.personal, 0, 1e7), location: txt(c.location, 120), notes: txt(c.notes, 1000)
+  };
+  if (c.example === true) copy.example = true;
+  return copy;
+}
+// Restituisce la collezione pulita e quante copie sono state scartate. Rifiuta ciò che non è una copia di sicurezza.
+function sanitizeState(raw) {
+  if (!isObj(raw) || !Array.isArray(raw.copies) || !isObj(raw.cards)) throw new Error("Formato non valido");
+  const cards = {}, sets = {}, seen = new Set();
+  for (const c of Object.values(raw.cards).slice(0, 50000)) { const k = cleanCard(c); if (k) cards[k.key] = k; }
+  if (isObj(raw.sets)) for (const s of Object.values(raw.sets).slice(0, 5000)) { const k = cleanSet(s); if (k) sets[k.key] = k; }
+  const copies = raw.copies.slice(0, 50000).map(c => cleanCopy(c, cards, seen)).filter(Boolean);
+  const snapshots = (Array.isArray(raw.snapshots) ? raw.snapshots : []).filter(s => isObj(s) && DATE_RE.test(s.day))
+    .map(s => ({ day: s.day, value: numIn(s.value, 0, 1e9) ?? 0, copies: numIn(s.copies, 0, 1e6) ?? 0 })).slice(-400);
+  const st = isObj(raw.settings) ? raw.settings : {};
+  const coef = {};
+  if (isObj(st.coef)) for (const [k, v] of Object.entries(st.coef)) { const n = numIn(v, 0.01, 10); if (langOk(k) && n != null) coef[k] = n; }
+  const settings = { lang: langOk(st.lang) || "it", cond: COND_CODES.includes(st.cond) ? st.cond : "NM", coef,
+    onboarded: st.onboarded === true, installDismissed: st.installDismissed === true };
+  if (langOk(st.scanLang)) settings.scanLang = st.scanLang;
+  const clean = { cards, sets, copies, snapshots, settings, lastRefresh: numIn(raw.lastRefresh, 0, 1e14) ?? 0 };
+  const lb = numIn(raw.lastBackup, 0, 1e14); if (lb) clean.lastBackup = lb;
+  return { state: clean, dropped: raw.copies.length - copies.length };
+}
+
+// ================================================================ Catalogo TCGdex
+let online = true;
+// Nell'anteprima dentro Claude il catalogo online è bloccato: lì si usano dati di esempio. Nell'app vera mai.
+const isPreview = !document.querySelector('link[rel="manifest"]');
+class NotFound extends Error {}
+const memo = new Map();
+async function api(lang, path, params) {
+  if (!online) return demoApi(lang, path, params);
+  const url = new URL(`${API}/${lang}/${path}`);
+  for (const [k, v] of Object.entries(params || {})) url.searchParams.set(k, v);
+  const key = url.toString();
+  if (memo.has(key)) return memo.get(key);
+  const p = (async () => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    try {
+      const r = await fetch(url, { signal: ctrl.signal });
+      if (r.status === 404) throw new NotFound("Non trovato nel catalogo");
+      if (!r.ok) throw new Error("Il catalogo ha risposto con errore " + r.status);
+      return await r.json();
+    } catch (e) {
+      if (e.name === "AbortError") throw new Error("Il catalogo non risponde: controlla la connessione");
+      if (e instanceof TypeError) throw new Error("Nessuna connessione al catalogo");
+      throw e;
+    } finally { clearTimeout(t); }
+  })();
+  memo.set(key, p);
+  p.catch(() => memo.delete(key));
+  if (memo.size > 400) memo.delete(memo.keys().next().value);
+  return p;
+}
+async function checkOnline() {
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch(`${API}/en/series/sv`, { signal: ctrl.signal });
+    clearTimeout(t);
+    online = r.ok;
+  } catch { online = false; }
+}
+const imgUrl = (base, high) => base ? `${base}/${high ? "high" : "low"}.webp` : "";
+
+function cardFromApi(c, lang) {
+  const cm = c.pricing?.cardmarket || {};
+  const v = c.variants || {};
+  const variants = { normal: !!v.normal, reverse: !!v.reverse, holo: !!v.holo, firstEdition: !!v.firstEdition };
+  if (!Object.values(variants).some(Boolean)) variants.normal = true;
+  return {
+    key: `${lang}|${c.id}`, id: c.id, lang, name: c.name, localId: String(c.localId), setId: c.set?.id || "",
+    setName: c.set?.name || "", official: c.set?.cardCount?.official || 0, rarity: c.rarity || "", illustrator: c.illustrator || "",
+    image: c.image || "", variants, example: !!c.example,
+    cm: { trend: cm.trend ?? null, avg30: cm.avg30 ?? null, low: cm.low ?? null, trendHolo: cm["trend-holo"] ?? null,
+          avg30Holo: cm["avg30-holo"] ?? null, lowHolo: cm["low-holo"] ?? null, updated: cm.updated ? String(cm.updated).slice(0, 10) : null },
+    fetched: Date.now()
+  };
+}
+function storeSet(d, lang) {
+  const key = `${lang}|${d.id}`;
+  state.sets[key] = { key, id: d.id, lang, name: d.name, serieId: d.serie?.id || "altro", serieName: d.serie?.name || "Altro",
+    release: d.releaseDate || "", official: d.cardCount?.official || 0, total: d.cardCount?.total || d.cardCount?.official || 0,
+    logo: d.logo || "", fetched: Date.now() };
+  Store.save();
+  return state.sets[key];
+}
+async function ensureSet(setId, lang) {
+  const s = state.sets[`${lang}|${setId}`];
+  if (s && Date.now() - s.fetched < 30 * 864e5) return s;
+  return storeSet(await api(lang, `sets/${encodeURIComponent(setId)}`), lang);
+}
+async function loadCard(id, lang, force) {
+  const fresh = c => c && !force && Date.now() - c.fetched < 12 * 3600e3;
+  if (fresh(state.cards[`${lang}|${id}`])) return state.cards[`${lang}|${id}`];
+  let used = lang, data;
+  try { data = await api(lang, `cards/${encodeURIComponent(id)}`); }
+  catch (e) {
+    if (!(e instanceof NotFound) || fallbackLang(lang) === lang) throw e;
+    used = fallbackLang(lang);
+    if (fresh(state.cards[`${used}|${id}`])) return state.cards[`${used}|${id}`];
+    data = await api(used, `cards/${encodeURIComponent(id)}`);
+  }
+  const card = cardFromApi(data, used);
+  state.cards[card.key] = card;
+  ensureSet(card.setId, used).catch(() => {});
+  Store.save();
+  return card;
+}
+
+// ================================================================ Valore e doppioni
+function marketPrice(card, variant) {
+  if (!card) return null;
+  const foil = variant === "reverse" || (variant === "holo" && card.variants.normal);
+  return foil ? (card.cm.trendHolo ?? card.cm.avg30Holo) : (card.cm.trend ?? card.cm.avg30);
+}
+const coef = lang => state.settings.coef[lang] ?? 1;
+function copyValue(cp) {
+  if (cp.personal != null) return cp.personal;
+  const p = marketPrice(state.cards[cp.cardKey], cp.variant);
+  return p == null ? 0 : p * coef(cp.lang);
+}
+const total = list => list.reduce((s, c) => s + copyValue(c), 0);
+const cardOf = cp => state.cards[cp.cardKey];
+function duplicateIds(list) {
+  const order = CONDITIONS.map(c => c[0]);
+  const groups = {};
+  for (const c of list) (groups[`${cardOf(c)?.id}|${c.lang}|${c.variant}`] ||= []).push(c);
+  const ids = new Set();
+  for (const g of Object.values(groups)) {
+    if (g.length < 2) continue;
+    g.sort((a, b) => (b.graded - a.graded) || (order.indexOf(a.cond) - order.indexOf(b.cond)) || (a.added - b.added));
+    g.slice(1).forEach(c => ids.add(c.id));
+  }
+  return ids;
+}
+function recordSnapshot() {
+  const day = today(), value = total(state.copies);
+  const existing = state.snapshots.find(s => s.day === day);
+  if (existing) { existing.value = value; existing.copies = state.copies.length; }
+  else state.snapshots.push({ day, value, copies: state.copies.length });
+  state.snapshots = state.snapshots.slice(-400);
+  Store.save();
+}
+async function refreshPrices(onProgress) {
+  const keys = [...new Set(state.copies.map(c => c.cardKey))];
+  let ok = 0, ko = 0;
+  for (let i = 0; i < keys.length; i += 6) {
+    await Promise.all(keys.slice(i, i + 6).map(async key => {
+      const c = state.cards[key];
+      if (!c) { ko++; return; }
+      try {
+        memo.delete(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
+        const fresh = cardFromApi(await api(c.lang, `cards/${encodeURIComponent(c.id)}`), c.lang);
+        c.cm = fresh.cm; c.fetched = Date.now(); ok++;
+      } catch { ko++; }
+    }));
+    onProgress && onProgress(Math.min(i + 6, keys.length), keys.length);
+  }
+  if (ko < Math.max(1, keys.length / 2)) state.lastRefresh = Date.now();
+  recordSnapshot();
+  return { ok, ko };
+}
+
+// ================================================================ Dal numero stampato alla carta
+function parseNumber(text) {
+  const m = String(text).toUpperCase().replace(/[|\\]/g, "/").match(/(?<![0-9A-Z])([A-Z]{0,3}[0-9]{1,3})\s?[\/-]\s?([0-9]{2,3})(?![0-9])/);
+  if (m) {
+    const n = parseInt(m[1].replace(/\D/g, ""), 10), t = parseInt(m[2], 10);
+    if (isNaN(n) || isNaN(t) || n === 0 || n > t + 150) return null;
+    return { number: m[1], total: t };
+  }
+  const plain = String(text).trim();
+  return /^[A-Z0-9]{1,8}$/i.test(plain) ? { number: plain, total: null } : null;
+}
+const numLabel = p => p.total ? cardNumber(p.number, p.total) : p.number;
+function lookupForms(num) {
+  const forms = [num];
+  const trimmed = num.replace(/^0+/, "");
+  if (trimmed && trimmed !== num) forms.push(trimmed);
+  if (/^\d+$/.test(num)) for (const p of [num.padStart(3, "0"), num.padStart(2, "0")]) if (!forms.includes(p)) forms.push(p);
+  return forms;
+}
+const setIndexCache = {};
+function setIndex(lang) {
+  return setIndexCache[lang] ||= api(lang, "sets").then(list => Object.fromEntries(list.map(s => [s.id, s]))).catch(() => { delete setIndexCache[lang]; return {}; });
+}
+const setIdOf = b => b.id.endsWith("-" + b.localId) ? b.id.slice(0, -(String(b.localId).length + 1)) : b.id.replace(/-[^-]*$/, "");
+const findCache = new Map();
+async function findByNumber(printed, lang) {
+  const ck = `${lang}|${numLabel(printed)}`;
+  if (findCache.has(ck)) return findCache.get(ck);
+  const attempt = async l => {
+    const lists = await Promise.all(lookupForms(printed.number).map(f => api(l, "cards", { localId: "eq:" + f }).catch(() => [])));
+    const seen = new Map();
+    lists.flat().forEach(b => seen.set(b.id, { ...b, localId: String(b.localId) }));
+    let briefs = [...seen.values()];
+    const idx = await setIndex(l);
+    if (printed.total) {
+      const same = briefs.filter(b => idx[setIdOf(b)]?.cardCount?.official === printed.total);
+      if (same.length) briefs = same;
+    }
+    return { lang: l, items: briefs.slice(0, 30).map(b => ({ ...b, setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0 })) };
+  };
+  let res = await attempt(lang);
+  if (!res.items.length && fallbackLang(lang) !== lang) res = await attempt(fallbackLang(lang));
+  findCache.set(ck, res);
+  return res;
+}
+
+// ================================================================ Interfaccia: utilità
+const ui = { tab: "collection", setView: null, browse: null, edFilter: "all", sort: "recent", mineQ: "", search: { q: "", lang: null, results: [], msg: "" } };
+const $ = s => document.querySelector(s);
+const main = $("#main");
+// Immagine della carta non disponibile: resta il retro con nome e numero (senza gestori inline, così la protezione CSP è completa).
+document.addEventListener("error", e => { if (e.target instanceof HTMLImageElement && e.target.closest(".art")) e.target.remove(); }, true);
+
+function toast(text, undo) {
+  const root = $("#toast-root");
+  root.innerHTML = `<div class="toast" role="status"><span>${esc(text)}</span>${undo ? `<button id="toast-undo">Annulla</button>` : ""}</div>`;
+  if (undo) $("#toast-undo").onclick = () => { undo(); root.innerHTML = ""; };
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => root.innerHTML = "", undo ? 4500 : 2600);
+}
+function art(card, high) {
+  const back = `<div class="back"><div><b>${esc(card?.name || "")}</b><span>${esc(card?.localId || "")}</span></div></div>`;
+  if (card?.image && online) return `<div class="art">${back}<img loading="lazy" alt="${esc(card.name)}" src="${esc(imgUrl(card.image, high))}"></div>`;
+  return `<div class="art">${back}</div>`;
+}
+const isFoil = card => !!card?.rarity && !/^(common|uncommon|comune|non comune|c|u)$/i.test(card.rarity);
+const langOptions = (sel, filterRegion) => LANGS.filter(l => !filterRegion || l.region === filterRegion)
+  .map(l => `<option value="${l.code}" ${l.code === sel ? "selected" : ""}>${l.name}</option>`).join("");
+const edChip = code => `<span class="chip ed" ${edStyle(code)}><span class="dot"></span>${esc(LANG[code]?.short || code)}</span>`;
+const copyChips = (cp, dup) => `<div class="chips">${edChip(cp.lang)}<span class="chip">${esc(VARIANTS[cp.variant] || cp.variant)}</span><span class="chip">${esc(cp.cond)}</span>${cp.graded ? `<span class="chip grade">${esc((cp.grader || "") + " " + (cp.grade || ""))}</span>` : ""}${dup ? `<span class="chip dup">doppione</span>` : ""}${cp.example ? `<span class="chip example">esempio</span>` : ""}</div>`;
+function ring(pct, color) {
+  const r = 23, c = 2 * Math.PI * r;
+  return `<div class="ring" aria-label="${Math.round(pct * 100)}% completato"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--sunk)" stroke-width="6"/>${pct > 0.005 ? `<circle cx="27" cy="27" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(c * pct).toFixed(1)} ${c.toFixed(1)}"/>` : ""}</svg><b>${Math.round(pct * 100)}%</b></div>`;
+}
+function seg(id, options, selected) {
+  return `<div class="seg" role="group" id="${id}">${options.map(([v, label, extra]) => `<button type="button" data-seg="${id}" data-value="${esc(v)}" aria-pressed="${v === selected}">${label}${extra != null ? ` <span class="count">${extra}</span>` : ""}</button>`).join("")}</div>`;
+}
+function setHeader(title, back) { $("#title").textContent = title; $("#back").hidden = !back; }
+const previewBanner = () => online ? "" : `<div class="banner">Anteprima con carte e prezzi <b>di esempio</b>: qui il catalogo online è bloccato. Messa online, l'app usa il catalogo TCGdex con i prezzi Cardmarket.</div>`;
+
+function render() {
+  document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-current", b.dataset.tab === ui.tab ? "page" : "false"));
+  if (ui.tab !== "scan") stopScanner();
+  const banner = previewBanner();
+  ({ collection: renderCollection, scan: renderScan, value: renderValue, trades: renderTrades, search: renderSearch })[ui.tab](banner);
+}
+
+// ================================================================ Collezione: edizione → serie → espansione
+function summaries() {
+  const groups = {};
+  for (const cp of state.copies) {
+    const card = cardOf(cp);
+    if (card) (groups[`${cp.lang}|${card.setId}`] ||= []).push(cp);
+  }
+  return Object.entries(groups).map(([k, list]) => {
+    const card = cardOf(list[0]);
+    const ed = list[0].lang;
+    const set = state.sets[`${card.lang}|${card.setId}`] || Object.values(state.sets).find(s => s.id === card.setId);
+    const distinct = new Set(list.map(c => cardOf(c)?.id)).size;
+    return { key: k, setId: card.setId, catLang: card.lang, ed, name: set?.name || card.setName, serieId: set?.serieId || "altro",
+             serieName: set?.serieName || "Altro", release: set?.release || "", distinct, totalCards: set?.total || card.official || distinct,
+             copies: list.length, value: total(list) };
+  });
+}
+function valueDelta() {
+  const s = state.snapshots;
+  if (s.length < 2) return "";
+  const now = s[s.length - 1].value;
+  const ref = s.find(x => x.day >= new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)) || s[0];
+  if (!ref.value || ref === s[s.length - 1]) return "";
+  const d = (now - ref.value) / ref.value;
+  return `<span class="delta">${d >= 0 ? "▲" : "▼"} ${Math.abs(d * 100).toFixed(1).replace(".", ",")}% in 30 giorni</span>`;
+}
+function renderCollection(banner) {
+  if (ui.setView) return renderBinder(banner);
+  if (ui.browse) return renderBrowse(banner);
+  setHeader("La mia collezione", false);
+  const all = summaries();
+  const distinct = new Set(state.copies.map(c => cardOf(c)?.id)).size;
+  const eds = EDITION_ORDER.filter(e => all.some(s => s.ed === e));
+  if (ui.edFilter !== "all" && !eds.includes(ui.edFilter)) ui.edFilter = "all";
+  let html = banner + `
+    <section class="trophy" aria-label="Riepilogo della collezione"><div class="trophy-inner">
+      <div class="eyebrow">Valore della collezione</div>
+      <div class="big">${euro(total(state.copies))}</div>
+      <div class="stats"><span><b>${state.copies.length}</b> copie</span><span><b>${distinct}</b> carte</span><span><b>${all.length}</b> espansioni</span></div>
+      ${valueDelta()}
+    </div></section>
+    <div class="quick"><button class="btn gold" data-tab="scan">Scansiona carte</button><button class="btn" data-action="browse">Tutte le espansioni</button></div>
+    ${notices()}`;
+  if (!state.copies.length) {
+    html += `<section class="panel empty"><h2>Il raccoglitore è vuoto</h2><p class="note">Inizia dalla scansione: inquadri le carte una dopo l'altra e l'app le archivia per edizione, serie ed espansione.</p></section>`;
+    main.innerHTML = html; return;
+  }
+  html += `<form class="searchbar" id="mine-form" role="search"><input id="mine-q" type="search" placeholder="Cerca nella tua collezione" value="${esc(ui.mineQ)}" aria-label="Cerca nella tua collezione" autocomplete="off" enterkeyhint="search"><button class="btn" type="submit">Cerca</button></form><div id="mine-results"></div><div id="sets-area">`;
+  if (eds.length > 1) html += seg("ed-filter", [["all", "Tutte", null], ...eds.map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`, all.filter(s => s.ed === e).length])], ui.edFilter);
+  html += `<div style="margin-top:10px">${seg("sort-sets", [["recent", "Più recenti"], ["value", "Valore"], ["completion", "Completamento"]], ui.sort)}</div>`;
+  const tile = (s, ed) => {
+    const pct = s.totalCards ? Math.min(1, s.distinct / s.totalCards) : 0;
+    return `<button class="set-tile ${pct >= 1 ? "complete" : ""}" ${edStyle(ed)} data-action="open-set" data-set="${esc(s.setId)}" data-lang="${esc(s.catLang)}" data-ed="${esc(ed)}">
+      ${ring(pct, edColor(ed))}
+      <div class="grow"><div class="name">${esc(s.name)}</div><div class="sub"><span class="num">${esc(s.distinct)}/${esc(s.totalCards)}</span> carte${s.release ? " · " + itDate(s.release) : ""}</div></div>
+      <span class="euro">${euro(s.value)}</span></button>`;
+  };
+  for (const ed of eds) {
+    if (ui.edFilter !== "all" && ui.edFilter !== ed) continue;
+    const inEd = all.filter(s => s.ed === ed);
+    const series = {};
+    inEd.forEach(s => (series[s.serieId] ||= []).push(s));
+    const ordered = Object.values(series).map(l => l.sort((a, b) => b.release.localeCompare(a.release))).sort((a, b) => b[0].release.localeCompare(a[0].release));
+    html += `<h2 class="section-title"><span class="dot" style="--rc:${edColor(ed)};width:12px;height:12px"></span>Pokémon ${LANG[ed].short} <small>${inEd.length} espansioni · ${euro(inEd.reduce((s, x) => s + x.value, 0))}</small></h2>`;
+    if (ui.sort !== "recent") {
+      const key = ui.sort === "value" ? (s => s.value) : (s => s.totalCards ? s.distinct / s.totalCards : 0);
+      html += `<div class="set-grid">${inEd.slice().sort((a, b) => key(b) - key(a)).map(s => tile(s, ed)).join("")}</div>`;
+      continue;
+    }
+    for (const list of ordered) {
+      html += `<div class="serie-head"><span>Serie ${esc(list[0].serieName)}</span></div><div class="set-grid">${list.map(s => tile(s, ed)).join("")}</div>`;
+    }
+  }
+  html += `</div>`;
+  main.innerHTML = html;
+  const input = $("#mine-q");
+  input.oninput = () => { ui.mineQ = input.value; showMine(); };
+  $("#mine-form").onsubmit = e => { e.preventDefault(); input.blur(); };
+  showMine();
+}
+// Ricerca istantanea tra le carte possedute (nome, numero o espansione).
+function showMine() {
+  const q = ui.mineQ.trim().toLowerCase();
+  const box = $("#mine-results"), sets = $("#sets-area");
+  if (!box || !sets) return;
+  sets.hidden = !!q;
+  if (!q) { box.innerHTML = ""; return; }
+  const groups = new Map();
+  for (const c of state.copies) {
+    const card = cardOf(c);
+    if (!card) continue;
+    const hay = `${card.name} ${card.setName} ${cardNumber(card.localId, card.official)} ${card.localId}`.toLowerCase();
+    if (!hay.includes(q)) continue;
+    const k = `${card.id}|${c.lang}`;
+    if (!groups.has(k)) groups.set(k, { card, ed: c.lang, n: 0, v: 0 });
+    const g = groups.get(k); g.n++; g.v += copyValue(c);
+  }
+  const list = [...groups.values()].sort((a, b) => b.v - a.v);
+  box.innerHTML = list.length ? `<p class="note">${list.length} carte trovate</p><div class="grid-cards" style="margin-top:8px">${list.map(g => `<button class="pocket owned ${isFoil(g.card) ? "foil" : ""}" data-action="open-card" data-id="${esc(g.card.id)}" data-lang="${esc(g.card.lang)}" data-ed="${esc(g.ed)}">${art(g.card)}<span class="count">${g.n}</span><span class="label name-l">${esc(g.card.name)}</span><span class="label">${esc(LANG[g.ed].short)} · ${esc(g.card.setName)}</span><span class="label euro" style="color:var(--ink)">${euro(g.v)}</span></button>`).join("")}</div>`
+    : `<section class="panel empty"><h2>Nessuna carta trovata</h2><p class="note">Non hai carte che corrispondono a “${esc(ui.mineQ)}”. Per cercare nel catalogo usa la scheda Cerca.</p></section>`;
+}
+// Avvisi in cima alla collezione: installazione sull'iPhone e copia di sicurezza.
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = () => window.navigator.standalone === true || window.matchMedia?.("(display-mode: standalone)").matches;
+function notices() {
+  let html = "";
+  if (!isPreview && isIOS && !isStandalone() && !state.settings.installDismissed) {
+    html += `<div class="notice"><div class="grow"><b>Installa l'app sull'iPhone</b><span class="sub">In Safari tocca Condividi, poi “Aggiungi alla schermata Home”. Si aprirà a tutto schermo, come un'app.</span></div><button class="btn small ghost" data-action="dismiss-install">Ok</button></div>`;
+  }
+  const days = state.lastBackup ? Math.floor((Date.now() - state.lastBackup) / 864e5) : null;
+  if (!isPreview && state.copies.length >= 10 && (days == null || days >= 14)) {
+    html += `<div class="notice"><div class="grow"><b>Salva una copia di sicurezza</b><span class="sub">${days == null ? "Non ne hai ancora salvata una." : `L'ultima è di ${days} giorni fa.`} I dati sono solo su questo iPhone.</span></div><button class="btn small gold" data-action="backup">Salva</button></div>`;
+  }
+  return html;
+}
+
+const setCache = {};
+async function fetchSet(setId, lang) {
+  const k = `${lang}|${setId}`;
+  if (setCache[k]) return setCache[k];
+  let used = lang, d;
+  try { d = await api(lang, `sets/${encodeURIComponent(setId)}`); }
+  catch (e) { if (fallbackLang(lang) === lang) throw e; used = fallbackLang(lang); d = await api(used, `sets/${encodeURIComponent(setId)}`); }
+  storeSet(d, used);
+  return (setCache[k] = { lang: used, data: d });
+}
+async function renderBinder(banner) {
+  const view = ui.setView;
+  setHeader("Espansione", true);
+  main.innerHTML = banner + `<p class="note">Apro il raccoglitore…</p>`;
+  let res;
+  try { res = await fetchSet(view.setId, view.lang); }
+  catch (e) { main.innerHTML = banner + `<section class="panel empty"><h2>Espansione non disponibile</h2><p class="note">${esc(e.message)}</p></section>`; return; }
+  if (ui.setView !== view || ui.tab !== "collection") return;
+  const d = res.data, ed = view.ed;
+  setHeader(d.name, true);
+  const owned = {};
+  state.copies.filter(c => c.lang === ed).forEach(c => { const id = cardOf(c)?.id; if (id) owned[id] = (owned[id] || 0) + 1; });
+  const official = d.cardCount?.official || 0;
+  const cards = (d.cards || []).map(c => ({ ...c, localId: String(c.localId) }));
+  const have = cards.filter(c => owned[c.id]).length;
+  const visible = view.filter === "missing" ? cards.filter(c => !owned[c.id]) : view.filter === "owned" ? cards.filter(c => owned[c.id]) : cards;
+  const pct = cards.length ? have / cards.length : 0;
+  const value = total(state.copies.filter(c => c.lang === ed && cardOf(c)?.setId === d.id));
+  let pages = "";
+  for (let i = 0; i < visible.length; i += 9) {
+    const slice = visible.slice(i, i + 9);
+    pages += `<div class="page"><div class="page-label"><span>Pagina ${i / 9 + 1}</span><span class="num">${esc(cardNumber(slice[0].localId, official).split("/")[0])}–${esc(cardNumber(slice[slice.length - 1].localId, official).split("/")[0])}</span></div>${slice.map(c => `
+      <button class="pocket ${owned[c.id] ? "owned" : "missing"}" data-action="open-card" data-id="${esc(c.id)}" data-lang="${esc(res.lang)}" data-ed="${esc(ed)}" aria-label="${esc(c.name)} ${esc(cardNumber(c.localId, official))}, ${owned[c.id] ? owned[c.id] + " possedute" : "mancante"}">
+        ${art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
+        <span class="label num">${esc(cardNumber(c.localId, official))}</span>
+      </button>`).join("")}</div>`;
+  }
+  main.innerHTML = banner + `
+    <section class="panel binder-head" ${edStyle(ed)}>
+      <div class="chips" style="margin:0">${edChip(ed)}<span class="chip">Serie ${esc(d.serie?.name || "")}</span>${d.releaseDate ? `<span class="chip">${itDate(d.releaseDate)}</span>` : ""}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px"><div><b class="price-big" style="font-size:30px">${have}</b><span class="sub"> di ${cards.length} carte (${Math.round(pct * 100)}%)</span></div><span class="euro">${euro(value)}</span></div>
+      <div class="bar ${pct >= 1 ? "full" : ""}"><span style="width:${(pct * 100).toFixed(1)}%"></span></div>
+      ${seg("binder-filter", [["all", "Tutte", cards.length], ["owned", "Possedute", have], ["missing", "Mancanti", cards.length - have]], view.filter || "all")}
+      <button class="btn gold" data-action="scan-this-set" data-set="${esc(d.id)}" data-name="${esc(d.name)}" data-ed="${esc(ed)}">Scansiona carte di questa espansione</button>
+    </section>
+    <div class="binder">${pages || `<p class="note">Nessuna carta in questo filtro.</p>`}</div>`;
+}
+async function renderBrowse(banner) {
+  const b = ui.browse;
+  setHeader(b.serie ? "Serie " + b.serie.name : "Tutte le espansioni", true);
+  const edSeg = seg("browse-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), b.ed);
+  main.innerHTML = banner + (b.serie ? "" : edSeg) + `<p class="note">Carico…</p>`;
+  const lang = b.ed;
+  try {
+    if (b.serie) {
+      let d;
+      try { d = await api(lang, `series/${encodeURIComponent(b.serie.id)}`); } catch { d = await api(fallbackLang(lang), `series/${encodeURIComponent(b.serie.id)}`); }
+      if (ui.browse !== b) return;
+      const sets = (d.sets || []).slice().reverse();
+      main.innerHTML = banner + `<div class="set-grid">${sets.map(s => {
+        const owned = new Set(state.copies.filter(c => c.lang === b.ed && cardOf(c)?.setId === s.id).map(c => cardOf(c).id)).size;
+        const tot = s.cardCount?.total || 0;
+        return `<button class="set-tile" ${edStyle(b.ed)} data-action="open-set" data-set="${esc(s.id)}" data-lang="${esc(lang)}" data-ed="${esc(b.ed)}">${ring(tot ? owned / tot : 0, edColor(b.ed))}<div class="grow"><div class="name">${esc(s.name)}</div><div class="sub"><span class="num">${owned}/${tot || "?"}</span> carte</div></div><span class="chev">›</span></button>`;
+      }).join("")}</div>`;
+    } else {
+      let list;
+      try { list = await api(lang, "series"); } catch { list = await api(fallbackLang(lang), "series"); }
+      if (ui.browse !== b) return;
+      main.innerHTML = banner + edSeg + `<section class="panel">${list.slice().reverse().map(s => `<button class="row" data-action="open-serie" data-id="${esc(s.id)}" data-name="${esc(s.name)}"><span class="dot" ${edStyle(b.ed)}></span><div class="grow name">Serie ${esc(s.name)}</div><span class="chev">›</span></button>`).join("")}</section>`;
+    }
+  } catch (e) {
+    main.innerHTML = banner + (b.serie ? "" : edSeg) + `<section class="panel empty"><h2>Catalogo non disponibile</h2><p class="note">${esc(e.message)}</p></section>`;
+  }
+}
+
+// ================================================================ Scansione veloce
+// Lettura continua del numero → conferma con 2 letture uguali → ricerca in cache →
+// carta unica: aggiunta automatica con le impostazioni della sessione; più carte: scelta con un tocco.
+const scan = {
+  lang: null, variant: "normal", cond: null, auto: true, lockSet: null,
+  running: false, paused: false, busy: false, status: "", last: null, lastSeen: 0, cooldown: new Map(),
+  pending: null, session: [], fresh: null, cameraOff: false, timer: null
+};
+let stream = null, ocrWorker = null, ocrLoading = null;
+
+function loadOCR() {
+  if (ocrWorker) return Promise.resolve(ocrWorker);
+  return ocrLoading ||= (async () => {
+    if (!window.Tesseract) {
+      await new Promise((resolve, reject) => {
+        const sc = document.createElement("script");
+        sc.src = OCR_DIR + "tesseract.min.js"; sc.onload = resolve; sc.onerror = () => reject(new Error("Lettura automatica non disponibile"));
+        document.head.appendChild(sc);
+      });
+    }
+    const w = await Tesseract.createWorker("eng", 1, {
+      workerPath: OCR_DIR + "worker.min.js", corePath: OCR_DIR, langPath: OCR_DIR.replace(/\/$/, ""), workerBlobURL: false, gzip: true
+    });
+    await w.setParameters({ tessedit_char_whitelist: "0123456789/", tessedit_pageseg_mode: "11" });
+    return (ocrWorker = w);
+  })().catch(e => { ocrLoading = null; throw e; });
+}
+async function startScanner() {
+  if (stream) { attachVideo(); return; }
+  if (scan.cameraOff || startScanner.pending) return;
+  startScanner.pending = true;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false });
+    if (ui.tab !== "scan") { stopScanner(); return; }
+    attachVideo();
+    if (!scan.running) { scan.running = true; loop(); }
+  } catch {
+    scan.cameraOff = true;
+    if (ui.tab === "scan") render();
+  } finally { startScanner.pending = false; }
+}
+function attachVideo() {
+  const v = $("#video");
+  if (v && v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); }
+}
+function stopScanner() {
+  scan.running = false;
+  clearTimeout(scan.timer);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+function setScanStatus(text, mode) {
+  scan.status = text;
+  const el = $("#scan-status"); if (el) el.textContent = text;
+  const box = $("#scanner"); if (box) { box.classList.toggle("reading", mode === "reading"); box.classList.toggle("hit", mode === "hit"); }
+}
+// Ritaglia la fascia del numero dentro la cornice e la prepara per la lettura (grigio e contrasto).
+function cropNumberStrip(src, w, h) {
+  const fw = w * 0.66, fh = Math.min(h, fw * 337 / 245);
+  const x0 = (w - fw) / 2, y0 = (h - fh) / 2;
+  const sy = Math.max(0, y0 + fh * 0.83), sh = Math.max(1, Math.min(fh * 0.17, h - sy));
+  const scale = Math.min(2, 1000 / fw);
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(fw * scale)); c.height = Math.max(1, Math.round(sh * scale));
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(src, x0, sy, fw, sh, 0, 0, c.width, c.height);
+  const img = ctx.getImageData(0, 0, c.width, c.height), p = img.data;
+  let sum = 0;
+  for (let i = 0; i < p.length; i += 4) { const g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]; p[i] = g; sum += g; }
+  const mean = sum / (p.length / 4);
+  for (let i = 0; i < p.length; i += 4) { const v = Math.max(0, Math.min(255, (p[i] - mean) * 1.8 + 128)); p[i] = p[i + 1] = p[i + 2] = v; }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+const numberIn = text => parseNumber((text || "").replace(/\s+/g, " ").match(/\d{1,3}\s?\/\s?\d{2,3}/)?.[0] || "");
+async function loop() {
+  if (!scan.running || ui.tab !== "scan") return;
+  const v = $("#video");
+  if (!scan.paused && !scan.busy && !scan.pending && !sheet && v && v.videoWidth) {
+    scan.busy = true;
+    try {
+      const worker = await loadOCR();
+      if (!scan.last) setScanStatus(scan.lockSet ? `Inquadra una carta di ${scan.lockSet.name}` : "Inquadra la carta: leggo il numero", "reading");
+      const { data } = await worker.recognize(cropNumberStrip(v, v.videoWidth, v.videoHeight));
+      handleRead(numberIn(data.text));
+    } catch {
+      setScanStatus("Lettura automatica non disponibile: scrivi il numero qui sotto", "");
+      scan.running = false;
+    }
+    scan.busy = false;
+  }
+  if (scan.running) scan.timer = setTimeout(loop, 300);
+}
+// Conferma un numero quando lo legge uguale due volte di fila; poi lo ignora finché la stessa carta resta inquadrata.
+function handleRead(p) {
+  const now = Date.now();
+  if (!p) { if (now - scan.lastSeen > 1200) scan.last = null; return; }
+  scan.lastSeen = now;
+  const label = numLabel(p);
+  if (scan.cooldown.get(label) > now) { scan.cooldown.set(label, now + 2500); return; }
+  if (scan.last === label) { scan.last = null; scan.cooldown.set(label, now + 2500); acceptNumber(p); }
+  else { scan.last = label; setScanStatus(`Letto ${label}…`, "reading"); }
+}
+async function acceptNumber(p) {
+  setScanStatus(`Cerco ${numLabel(p)}…`, "hit");
+  let res;
+  try { res = await findByNumber(p, scan.lang); }
+  catch (e) { setScanStatus(e.message, ""); return; }
+  let items = res.items;
+  if (scan.lockSet) {
+    const inSet = items.filter(b => b.setId === scan.lockSet.id);
+    if (inSet.length) items = inSet;
+  }
+  // Prima le carte dell'espansione appena scansionata: di solito si scansiona un'espansione alla volta.
+  const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
+  if (lastSet) items = [...items.filter(b => b.setId === lastSet), ...items.filter(b => b.setId !== lastSet)];
+  if (!items.length) { setScanStatus(`Nessuna carta ${numLabel(p)} in ${edName(scan.lang).toLowerCase()}`, ""); beep(false); return; }
+  const sameSetFirst = lastSet && items[0].setId === lastSet && items.filter(b => b.setId === lastSet).length === 1;
+  if (scan.auto && (items.length === 1 || sameSetFirst || scan.lockSet && items.length === 1)) { await addFromScan(items[0], res.lang); return; }
+  scan.pending = { label: numLabel(p), lang: res.lang, items: items.slice(0, 12) };
+  setScanStatus(`${items.length} carte con il numero ${numLabel(p)}: scegli quella giusta`, "");
+  beep(true);
+  renderScanPanels();
+}
+async function addFromScan(brief, lang) {
+  try {
+    const card = await loadCard(brief.id, lang);
+    const variant = card.variants[scan.variant] ? scan.variant : (Object.keys(card.variants).find(k => card.variants[k]) || "normal");
+    const already = state.copies.filter(c => cardOf(c)?.id === card.id && c.lang === scan.lang).length;
+    const copy = { id: uid(), added: Date.now(), cardKey: card.key, lang: regionOf(scan.lang) === regionOf(card.lang) ? scan.lang : card.lang,
+                   variant, cond: scan.cond, graded: false, grader: null, grade: null, purchase: null, personal: null, location: "", notes: "", already };
+    state.copies.push(copy);
+    scan.session.unshift(copy);
+    scan.fresh = copy.id;
+    scan.pending = null;
+    recordSnapshot();
+    beep(true);
+    setScanStatus(`Aggiunta: ${card.name} ${cardNumber(card.localId, card.official)}`, "hit");
+    renderScanPanels();
+    toast(`${card.name} aggiunta${already ? ` · ne avevi già ${already}` : ""}`, () => removeCopy(copy.id));
+  } catch (e) {
+    setScanStatus("Non riesco a caricare la carta: " + e.message, "");
+  }
+}
+function removeCopy(id) {
+  state.copies = state.copies.filter(c => c.id !== id);
+  scan.session = scan.session.filter(c => c.id !== id);
+  recordSnapshot();
+  if (ui.tab === "scan") renderScanPanels(); else render();
+}
+let audioCtx = null;
+function beep(ok) {
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.frequency.value = ok ? 880 : 220; g.gain.value = 0.06;
+    o.connect(g); g.connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + (ok ? 0.08 : 0.18));
+  } catch {}
+}
+
+function renderScan(banner) {
+  setHeader("Scansiona", false);
+  scan.lang ||= state.settings.scanLang || state.settings.lang;
+  scan.cond ||= state.settings.cond;
+  const variantOptions = [["normal", "Normale"], ["reverse", "Reverse"], ["holo", "Holo"], ["firstEdition", "1ª ed."]];
+  const demoCam = isPreview && !online;
+  main.innerHTML = banner + `
+    ${demoCam ? `
+      <section class="scanner demo" id="scanner">
+        <div class="demo-cam" aria-hidden="true"></div>
+        <div class="frame"><div class="numzone"></div></div>
+        <div class="status" id="scan-status">${esc(scan.status || "Anteprima: tocca Simula lettura")}</div>
+        <div class="controls">
+          <button class="btn small gold" data-action="simulate">Simula lettura</button>
+          <button class="btn small ${scan.auto ? "gold" : ""}" data-action="toggle-auto" aria-pressed="${scan.auto}">Aggiunta automatica: ${scan.auto ? "sì" : "no"}</button>
+        </div>
+      </section>` : scan.cameraOff ? `
+      <section class="scanner off" id="scanner"><div class="inner">
+        <div>La fotocamera dal vivo non è disponibile qui.</div>
+        <label class="btn gold" for="photo-input">Scatta una foto della carta</label>
+        <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
+        ${isPreview && !online ? `<button class="btn small" data-action="simulate">Simula la lettura di una carta</button>` : ""}
+      </div></section>` : `
+      <section class="scanner" id="scanner">
+        <video id="video" playsinline muted></video>
+        <div class="frame"><div class="numzone"></div></div>
+        <div class="status" id="scan-status">${esc(scan.status || "Avvio la fotocamera…")}</div>
+        <div class="controls">
+          <button class="btn small" data-action="toggle-pause">${scan.paused ? "Riprendi" : "Pausa"}</button>
+          <button class="btn small ${scan.auto ? "gold" : ""}" data-action="toggle-auto" aria-pressed="${scan.auto}">Aggiunta automatica: ${scan.auto ? "sì" : "no"}</button>
+        </div>
+      </section>`}
+    <section class="panel form session-bar" aria-label="Impostazioni della sessione">
+      <div class="two">
+        <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang">${langOptions(scan.lang)}</select></div>
+        <div class="field"><label for="scan-cond">Condizione</label><select id="scan-cond">${CONDITIONS.map(([k, n]) => `<option value="${k}" ${k === scan.cond ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><div class="label"><span>Variante</span><span>separa prima le pile</span></div>${seg("scan-variant", variantOptions, scan.variant)}</div>
+      ${scan.lockSet ? `<div class="check" style="justify-content:space-between"><span>Solo carte di <b>${esc(scan.lockSet.name)}</b></span><button class="btn small ghost" data-action="unlock-set">Togli</button></div>` : ""}
+      <form class="searchbar" id="manual-form"><input id="manual" placeholder="Oppure scrivi il numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" inputmode="numeric"><button class="btn primary" type="submit">Aggiungi</button></form>
+    </section>
+    <div id="scan-panels"></div>`;
+  $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); setIndex(scan.lang); Store.save(); };
+  $("#scan-cond").onchange = e => { scan.cond = e.target.value; };
+  $("#manual-form").onsubmit = e => {
+    e.preventDefault();
+    const p = parseNumber($("#manual").value);
+    if (!p) { toast("Scrivi il numero come è stampato, per esempio 025/165"); return; }
+    $("#manual").value = "";
+    acceptNumber(p);
+  };
+  const photo = $("#photo-input");
+  if (photo) photo.onchange = async e => {
+    const f = e.target.files?.[0]; if (!f) return;
+    e.target.value = "";
+    setScanStatus("Leggo il numero dalla foto…", "reading");
+    try {
+      const bmp = await createImageBitmap(f);
+      const worker = await loadOCR();
+      const { data } = await worker.recognize(cropNumberStrip(bmp, bmp.width, bmp.height));
+      const p = numberIn(data.text);
+      if (p) acceptNumber(p); else toast("Numero non leggibile: avvicina la carta o scrivilo a mano");
+    } catch (err) { toast((err.message || "Lettura non riuscita") + ": scrivi il numero a mano"); }
+  };
+  renderScanPanels();
+  // Preparo in anticipo indice delle espansioni e lettore, così la prima carta è già veloce.
+  setIndex(scan.lang);
+  if (!scan.cameraOff && !demoCam) { loadOCR().catch(() => {}); startScanner(); }
+}
+function renderScanPanels() {
+  const root = $("#scan-panels");
+  if (!root) return;
+  const pend = scan.pending;
+  const sess = scan.session.filter(c => state.copies.includes(c));
+  root.innerHTML = `
+    ${pend ? `<section class="panel picker" aria-label="Scegli la carta">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Quale carta ${esc(pend.label)}?</b><button class="btn small ghost" data-action="skip-pending">Salta</button></div>
+      <div class="options">${pend.items.map(b => `<button class="pocket" data-action="pick" data-id="${esc(b.id)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label">${esc(b.setName)}</span></button>`).join("")}</div>
+    </section>` : ""}
+    <h2 class="section-title">Questa sessione <small>${sess.length} carte · ${euro(total(sess))}</small></h2>
+    ${sess.length ? `<section class="panel">${sess.map(c => {
+      const card = cardOf(c);
+      return `<div class="tray-item ${scan.fresh === c.id ? "new" : ""}">
+        <button class="thumb pocket" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}" aria-label="Apri ${esc(card.name)}">${art(card)}</button>
+        <div class="grow"><div class="name">${esc(card.name)}</div><div class="sub"><span class="num">${esc(cardNumber(card.localId, card.official))}</span> · ${esc(card.setName)}</div>
+          <div class="chips">${edChip(c.lang)}<span class="chip">${esc(c.cond)}</span>${c.already ? `<span class="chip dup">ne avevi ${c.already}</span>` : ""}<span class="euro" style="font-size:13px">${euro(copyValue(c))}</span></div></div>
+        <div class="tray-actions">
+          <button class="btn small" data-action="cycle-variant" data-copy="${esc(c.id)}" aria-label="Variante ${esc(VARIANTS[c.variant])}, tocca per cambiarla">${esc(VARIANTS[c.variant])}</button>
+          <button class="btn small danger" data-action="remove-copy" data-copy="${esc(c.id)}" aria-label="Togli ${esc(card.name)}">✕</button>
+        </div></div>`;
+    }).join("")}</section>` : `<p class="note">Le carte aggiunte compaiono qui: tocca la variante per cambiarla, ✕ per toglierle.</p>`}`;
+  scan.fresh = null;
+}
+
+// ================================================================ Valore
+function sparkline(points) {
+  if (points.length < 2) return "";
+  const vals = points.map(p => p.value);
+  const min = Math.min(...vals), max = Math.max(...vals), span = max - min || 1;
+  const W = 300, H = 64, pad = 5;
+  const xy = points.map((p, i) => [pad + i * (W - 2 * pad) / (points.length - 1), H - pad - (p.value - min) / span * (H - 2 * pad)]);
+  const line = xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  const last = xy[xy.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Andamento del valore"><path d="${line} L${last[0].toFixed(1)} ${H} L${pad} ${H} Z" fill="rgba(255,255,255,.18)"/><path d="${line}" fill="none" stroke="#ffffff" stroke-width="2.5" vector-effect="non-scaling-stroke"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="4" fill="#ffd23f"/></svg>`;
+}
+function renderValue(banner) {
+  setHeader("Valore", false);
+  const dups = duplicateIds(state.copies);
+  const spent = state.copies.reduce((s, c) => s + (c.purchase || 0), 0);
+  const tot = total(state.copies);
+  const top = state.copies.filter(c => cardOf(c)).map(c => [c, copyValue(c)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 12);
+  const snaps = state.snapshots.slice(-90);
+  const byEd = EDITION_ORDER.map(e => { const l = state.copies.filter(c => c.lang === e); return { e, n: l.length, v: total(l) }; }).filter(x => x.n);
+  const maxV = Math.max(1, ...byEd.map(x => x.v));
+  const last = state.lastRefresh ? new Date(state.lastRefresh).toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" }) : null;
+  main.innerHTML = banner + `
+    <section class="trophy"><div class="trophy-inner">
+      <div class="eyebrow">Valore totale</div>
+      <div class="big">${euro(tot)}</div>
+      <div class="stats">${spent ? `<span>Speso <b>${euro(spent)}</b></span><span>Differenza <b>${euro(tot - spent)}</b></span>` : ""}<span>Doppioni <b>${euro(total(state.copies.filter(c => dups.has(c.id))))}</b></span></div>
+      ${valueDelta()}
+      ${sparkline(snaps)}
+    </div></section>
+    ${top.length ? `<h2 class="section-title">Le carte di maggior valore</h2>
+    <div class="hscroll">${top.map(([c, v]) => { const card = cardOf(c); return `<button class="pocket owned ${isFoil(card) ? "foil" : ""}" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}">${art(card)}<span class="label name-l">${esc(card.name)}</span><span class="label euro" style="color:var(--ink)">${euro(v)}</span></button>`; }).join("")}</div>` : ""}
+    ${byEd.length ? `<h2 class="section-title">Per edizione</h2>
+    <section class="panel bars">${byEd.map(x => `<div class="line" ${edStyle(x.e)}><span><span class="dot"></span> Pokémon ${LANG[x.e].short} <span class="sub">· ${x.n} copie</span></span><span class="euro">${euro(x.v)}</span><div class="track"><span style="width:${(x.v / maxV * 100).toFixed(1)}%"></span></div></div>`).join("")}</section>` : ""}
+    <section class="panel form">
+      <button class="btn primary" data-action="refresh">Aggiorna i prezzi ora</button>
+      <p class="note">${last ? "Ultimo aggiornamento: " + esc(last) + ". " : ""}Trend Cardmarket in euro via TCGdex, aggiornato da solo una volta al giorno all'apertura.</p>
+    </section>
+    <button class="btn ghost" data-action="open-settings">Coefficienti per edizione e copia di sicurezza</button>
+    <p class="note">Catalogo, immagini e prezzi da TCGdex (fonte Cardmarket). App per uso personale, non affiliata a The Pokémon Company né a Cardmarket.</p>`;
+}
+
+// ================================================================ Impostazioni e benvenuto (pannelli)
+function openPanel(title, body, bind) {
+  sheet = { panel: true };
+  $("#sheet-root").innerHTML = `<div class="sheet-wrap" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <div class="grab"></div>
+    <div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" data-action="close-sheet-btn" aria-label="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    ${body}</div></div>`;
+  bind && bind();
+}
+function openSettings() {
+  const lastB = state.lastBackup ? new Date(state.lastBackup).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) : "mai";
+  openPanel("Impostazioni", `
+    <section class="panel form">
+      <div class="two">
+        <div class="field"><label for="set-lang">Edizione predefinita</label><select id="set-lang">${langOptions(state.settings.lang)}</select></div>
+        <div class="field"><label for="set-cond">Condizione predefinita</label><select id="set-cond">${CONDITIONS.map(([k, n]) => `<option value="${k}" ${k === state.settings.cond ? "selected" : ""}>${n}</option>`).join("")}</select></div>
+      </div>
+      <p class="note">Valgono per la scansione e per le nuove copie; puoi cambiarle ogni volta.</p>
+    </section>
+    <h3 class="section-title">Coefficienti per edizione</h3>
+    <section class="panel form">
+      <p class="note">Il trend Cardmarket mescola tutte le lingue. Il valore di una copia è trend × coefficiente della sua edizione (1 = nessuna correzione; 0,8 = il 20% in meno).</p>
+      <div class="two">${LANGS.map(l => `<div class="field"><label for="coef-${l.code}">${l.name}</label><input id="coef-${l.code}" data-coef="${l.code}" type="number" step="0.05" min="0.1" max="5" inputmode="decimal" value="${coef(l.code)}"></div>`).join("")}</div>
+    </section>
+    <h3 class="section-title">Copia di sicurezza</h3>
+    <section class="panel form">
+      <p class="note">I dati sono salvati solo su questo iPhone. Salva una copia (per esempio in File › iCloud Drive) ogni due settimane e prima di cambiare telefono. Ultima copia: <b>${lastB}</b>.</p>
+      <div class="btn-row"><button class="btn gold" data-action="backup">Salva copia</button><label class="btn ghost" for="restore-input">Ripristina da copia</label><input id="restore-input" type="file" accept="application/json,.json" hidden></div>
+    </section>
+    <section class="panel">
+      <a class="row" id="settings-guide" href="${esc(guideHref())}" target="_blank" rel="noopener" style="color:var(--accent);font-weight:800">Apri la guida all'uso <span class="chev" style="margin-left:auto">›</span></a>
+      <button class="row" data-action="show-welcome" style="font-weight:800">Rivedi il benvenuto <span class="chev" style="margin-left:auto">›</span></button>
+    </section>
+    <p class="meta-line">Raccoglitore TCG · versione ${APP_VERSION} del ${APP_DATE}<br>Catalogo e prezzi: TCGdex (fonte Cardmarket). Uso personale, non affiliata a The Pokémon Company né a Cardmarket.</p>`, () => {
+    $("#set-lang").onchange = e => { state.settings.lang = e.target.value; state.settings.scanLang = e.target.value; scan.lang = null; Store.save(); };
+    $("#set-cond").onchange = e => { state.settings.cond = e.target.value; scan.cond = null; Store.save(); };
+    document.querySelectorAll("[data-coef]").forEach(inp => inp.onchange = e => {
+      const v = parseFloat(String(e.target.value).replace(",", "."));
+      if (!isNaN(v) && v > 0) { state.settings.coef[e.target.dataset.coef] = v; recordSnapshot(); toast("Coefficiente salvato"); }
+    });
+    $("#restore-input").onchange = async e => {
+      const f = e.target.files?.[0]; if (!f) return;
+      e.target.value = "";
+      try {
+        if (f.size > 30e6) throw new Error("File troppo grande");
+        const { state: clean, dropped } = sanitizeState(JSON.parse(await f.text()));
+        const before = state;
+        state = clean; Store.save(); closeSheet();
+        // Per qualche secondo si può tornare alla collezione di prima.
+        toast(`Ripristinate ${state.copies.length} copie${dropped ? ` (${dropped} non valide ignorate)` : ""}`,
+          () => { state = before; Store.save(); render(); toast("Ripristino annullato"); });
+      } catch { toast("Questo file non è una copia di sicurezza valida"); }
+    };
+  });
+}
+function openWelcome() {
+  state.settings.onboarded = true; Store.save();
+  const showInstall = isIOS && !isStandalone() && !isPreview;
+  openPanel("Benvenuto", `
+    <div class="welcome-hero"><h3>Il tuo raccoglitore di carte Pokémon</h3><p style="margin:0">Scansioni le carte, l'app le archivia per edizione, serie ed espansione e ti dice quanto valgono su Cardmarket.</p></div>
+    <div class="field"><div class="label">Quale edizione collezioni di più?</div>${seg("welcome-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), state.settings.lang)}</div>
+    <ol class="steps">
+      <li><div><b>Scansiona</b><span class="sub">Tocca il pulsante giallo e tieni le carte una dopo l'altra nella cornice, con il numero (es. 025/165) nel riquadro in basso. Le carte si aggiungono da sole.</span></div></li>
+      <li><div><b>Sfoglia il raccoglitore</b><span class="sub">Ogni espansione è un raccoglitore da 9 tasche: le carte che hai sono a colori, le mancanti in grigio.</span></div></li>
+      <li><div><b>Tieni d'occhio valore e doppioni</b><span class="sub">Il valore si aggiorna ogni giorno; i doppioni finiscono in Scambi, pronti da esportare.</span></div></li>
+      ${showInstall ? `<li><div><b>Installa l'app</b><span class="sub">In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.</span></div></li>` : ""}
+    </ol>
+    <button class="btn gold" data-action="welcome-done">Inizia</button>
+    <a class="btn ghost" href="${esc(guideHref())}" target="_blank" rel="noopener" style="text-decoration:none">Leggi la guida completa</a>`);
+}
+const guideHref = () => isPreview ? GUIDE_URL : "guida.html";
+
+// ================================================================ Scambi
+function renderTrades(banner) {
+  setHeader("Scambi", false);
+  const ids = duplicateIds(state.copies);
+  const dups = state.copies.filter(c => ids.has(c.id) && cardOf(c)).sort((a, b) => copyValue(b) - copyValue(a));
+  main.innerHTML = banner + `
+    <section class="trophy"><div class="trophy-inner">
+      <div class="eyebrow">Doppioni da scambiare o vendere</div>
+      <div class="big">${dups.length} <span style="font-size:22px">copie</span></div>
+      <div class="stats"><span>Valore <b>${euro(total(dups))}</b></span></div>
+    </div></section>
+    <p class="note">Per ogni carta, edizione e variante resta in collezione la copia migliore: prima la gradata, poi la condizione migliore, poi la prima inserita.</p>
+    <div class="quick"><button class="btn" data-action="csv-dups" ${dups.length ? "" : "disabled"}>Esporta doppioni</button><button class="btn ghost" data-action="csv-all" ${state.copies.length ? "" : "disabled"}>Esporta tutto</button></div>
+    ${dups.length ? `<div class="grid-cards">${dups.map(c => { const card = cardOf(c); return `<button class="pocket owned" data-action="open-card" data-id="${esc(card.id)}" data-lang="${esc(card.lang)}" data-ed="${esc(c.lang)}">${art(card)}<span class="label name-l">${esc(card.name)}</span><span class="label">${esc(LANG[c.lang].short)} · ${esc(VARIANTS[c.variant])} · ${esc(c.cond)}</span><span class="label euro" style="color:var(--ink)">${euro(copyValue(c))}</span></button>`; }).join("")}</div>`
+      : `<section class="panel empty"><h2>Nessun doppione</h2><p class="note">Quando aggiungi una seconda copia uguale, la trovi qui.</p></section>`}`;
+}
+function csv(list) {
+  const ids = duplicateIds(state.copies);
+  const num = v => v == null ? "" : v.toFixed(2).replace(".", ",");
+  // Un testo che inizia con = + - @ verrebbe eseguito da Excel come formula: lo apro con un apostrofo (gli importi restano numeri).
+  const q = v => {
+    let s = String(v ?? "");
+    if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(,\d+)?$/.test(s)) s = "'" + s;
+    return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [["Carta","Espansione","Numero","Rarità","ID TCGdex","Edizione","Variante","Condizione","Gradata","Voto","Doppione","Valore EUR","Prezzo acquisto EUR","Posizione","Note"]];
+  for (const c of list) {
+    const card = cardOf(c) || {};
+    rows.push([card.name, card.setName, cardNumber(card.localId, card.official), rarityIt(card.rarity), card.id, LANG[c.lang]?.short, VARIANTS[c.variant],
+      c.cond, c.graded ? "Sì" : "No", c.graded ? `${c.grader || ""} ${c.grade || ""}`.trim() : "", ids.has(c.id) ? "Sì" : "No",
+      num(copyValue(c)), num(c.purchase), c.location, c.notes].map(q));
+  }
+  return "﻿" + rows.map(r => r.join(";")).join("\n");
+}
+async function shareFile(name, text, type) {
+  const file = new File([text], name, { type });
+  try { if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: name }); return true; } }
+  catch (e) { if (e.name === "AbortError") return false; }
+  if (isPreview) { toast("Nell'anteprima i file non si possono salvare"); return false; }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return true;
+}
+
+// ================================================================ Cerca
+function renderSearch(banner) {
+  setHeader("Cerca", false);
+  const s = ui.search;
+  s.lang ||= state.settings.lang;
+  main.innerHTML = banner + `
+    <form class="searchbar" id="search-form"><input id="q" type="search" placeholder="Nome della carta, es. Pikachu" value="${esc(s.q)}" aria-label="Nome della carta" enterkeyhint="search"><button class="btn primary" type="submit">Cerca</button></form>
+    ${seg("search-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), s.lang)}
+    ${s.msg ? `<p class="note">${esc(s.msg)}</p>` : ""}
+    <div class="grid-cards">${s.results.map(b => `<button class="pocket" data-action="open-card" data-id="${esc(b.id)}" data-lang="${esc(s.usedLang || s.lang)}" data-ed="${esc(s.usedLang || s.lang)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label num">${esc(b.id)}</span></button>`).join("")}</div>`;
+  $("#search-form").onsubmit = e => { e.preventDefault(); s.q = $("#q").value.trim(); doSearch(); };
+}
+async function doSearch() {
+  const s = ui.search;
+  if (s.q.length < 2) { s.msg = "Scrivi almeno due lettere."; render(); return; }
+  s.msg = "Cerco…"; render();
+  try {
+    const list = await api(s.lang, "cards", { name: s.q });
+    s.results = list.slice().reverse().slice(0, 240).map(b => ({ ...b, localId: String(b.localId) }));
+    s.usedLang = s.lang;
+    s.msg = s.results.length ? `${list.length} carte trovate${list.length > 240 ? ", le 240 più recenti" : ""}.` : `Nessuna carta trovata nell'edizione ${LANG[s.lang].short}.`;
+  } catch (e) { s.results = []; s.msg = e.message; }
+  render();
+}
+
+// ================================================================ Scheda carta
+let sheet = null;
+async function openCard(id, lang, ed) {
+  sheet = { id, lang, ed: ed || lang, card: null, error: null, form: null };
+  drawSheet();
+  try { sheet.card = await loadCard(id, lang); } catch (e) { if (sheet) sheet.error = e.message; }
+  drawSheet();
+}
+function closeSheet() {
+  sheet = null; $("#sheet-root").innerHTML = "";
+  if (ui.tab === "scan") renderScanPanels(); else render();
+}
+function drawSheet() {
+  const root = $("#sheet-root");
+  if (!sheet) { root.innerHTML = ""; return; }
+  const c = sheet.card;
+  let body;
+  if (sheet.error) body = `<p class="note">${esc(sheet.error)}</p>`;
+  else if (!c) body = `<p class="note">Carico la carta…</p>`;
+  else {
+    const mine = state.copies.filter(cp => cardOf(cp)?.id === c.id);
+    const dups = duplicateIds(state.copies);
+    const vlist = Object.entries(c.variants).filter(([, on]) => on).map(([k]) => VARIANTS[k]).join(", ");
+    const priced = c.cm.trend != null || c.cm.trendHolo != null || c.cm.avg30 != null;
+    const headline = marketPrice(c, Object.keys(c.variants).find(k => c.variants[k]) || "normal");
+    const cmLink = `https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`;
+    body = `
+      <div class="card-hero">
+        <div class="showcase ${isFoil(c) ? "foil" : ""}">${art(c, true)}</div>
+        <div style="display:grid;gap:10px;min-width:0">
+          <div><div class="sub">Valore di mercato</div><div class="price-big">${euro(headline)}</div>${c.example ? `<span class="chip example">prezzo di esempio</span>` : ""}</div>
+          <dl class="kv">
+            <dt>Espansione</dt><dd>${esc(c.setName)}</dd>
+            <dt>Numero</dt><dd class="num">${esc(cardNumber(c.localId, c.official))}</dd>
+            ${c.rarity ? `<dt>Rarità</dt><dd>${esc(rarityIt(c.rarity))}</dd>` : ""}
+            <dt>Varianti</dt><dd>${esc(vlist)}</dd>
+            ${c.illustrator ? `<dt>Illustr.</dt><dd>${esc(c.illustrator)}</dd>` : ""}
+          </dl>
+        </div>
+      </div>
+      <section class="panel">${priced ? `<div class="price-grid">
+          <div><span class="sub">Trend</span><span class="euro">${euro(c.cm.trend)}</span></div>
+          <div><span class="sub">Media 30 gg</span><span class="euro">${euro(c.cm.avg30)}</span></div>
+          <div><span class="sub">${c.cm.trendHolo != null ? "Trend reverse/foil" : "Minimo"}</span><span class="euro">${euro(c.cm.trendHolo != null ? c.cm.trendHolo : c.cm.low)}</span></div>
+        </div>` : `<div class="row note">Nessun prezzo Cardmarket per questa carta.</div>`}
+        <a class="row" href="${cmLink}" target="_blank" rel="noopener" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">Vedi le offerte su Cardmarket <span class="chev" style="margin-left:auto">›</span></a>
+      </section>
+      <p class="note">Fonte: Cardmarket via TCGdex${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
+      <h3 class="section-title">Le tue copie <small>${mine.length}</small></h3>
+      ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}"><div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
+      ${sheet.form ? copyForm(c) : quickAdd(c)}`;
+  }
+  root.innerHTML = `<div class="sheet-wrap" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(c?.name || "Carta")}">
+    <div class="grab"></div>
+    <div class="sheet-head"><h2>${esc(c?.name || "Carta")}</h2><button class="icon-btn" data-action="close-sheet-btn" aria-label="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    ${body}</div></div>`;
+  if (sheet.form) bindForm(c);
+}
+function quickEd(c) {
+  const region = regionOf(c.lang);
+  return regionOf(sheet.ed) === region ? sheet.ed : (regionOf(state.settings.lang) === region ? state.settings.lang : c.lang);
+}
+// Aggiunta con un tocco: edizione e condizione predefinite, si sceglie solo la variante.
+function quickAdd(c) {
+  const ed = quickEd(c);
+  const variants = Object.keys(c.variants).filter(k => c.variants[k]);
+  return `<section class="panel quickadd" aria-label="Aggiungi velocemente">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b>Aggiungi alla collezione</b><span class="chips" style="margin:0">${edChip(ed)}<span class="chip">${esc(state.settings.cond)}</span></span></div>
+    <div class="btn-row">${variants.map(v => `<button class="btn gold" data-action="quick-add" data-variant="${esc(v)}">+1 ${esc(VARIANTS[v])}</button>`).join("")}</div>
+    <button class="btn ghost" data-action="new-copy">Altre opzioni: edizione, condizione, gradata, prezzo</button>
+  </section>`;
+}
+function copyForm(c) {
+  const f = sheet.form;
+  const region = regionOf(c.lang);
+  const variants = Object.entries(c.variants).filter(([, on]) => on).map(([k]) => [k, VARIANTS[k]]);
+  const sameKey = state.copies.filter(cp => cardOf(cp)?.id === c.id && cp.lang === f.lang && cp.variant === f.variant && cp.id !== f.id).length;
+  const price = marketPrice(c, f.variant);
+  return `<form class="panel form" id="copy-form">
+    <b style="font-family:var(--font-display);font-size:20px">${f.id ? "Modifica la copia" : "Nuova copia"}</b>
+    <div class="field"><div class="label">Edizione</div>${seg("f-lang", LANGS.filter(l => l.region === region).map(l => [l.code, l.short]), f.lang)}</div>
+    <div class="field"><div class="label">Variante</div>${seg("f-variant", variants, f.variant)}</div>
+    <div class="field"><div class="label">Condizione</div>${seg("f-cond", CONDITIONS.map(([k]) => [k, k]), f.cond)}</div>
+    ${sameKey ? `<p class="note warn">Ne hai già ${sameKey} uguale: se questa non è in condizione migliore finirà tra i doppioni.</p>` : ""}
+    <label class="check"><input type="checkbox" id="f-graded" ${f.graded ? "checked" : ""}> Carta gradata</label>
+    <div class="two" ${f.graded ? "" : "hidden"} id="grade-fields">
+      <div class="field"><label for="f-grader">Ente</label><select id="f-grader">${GRADERS.map(g => `<option ${g === f.grader ? "selected" : ""}>${g}</option>`).join("")}</select></div>
+      <div class="field"><label for="f-grade">Voto</label><input id="f-grade" inputmode="decimal" value="${esc(f.grade || "")}"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="f-purchase">Pagata (€)</label><input id="f-purchase" inputmode="decimal" value="${esc(f.purchase ?? "")}"></div>
+      <div class="field"><label for="f-personal">Valore tuo (€)</label><input id="f-personal" inputmode="decimal" placeholder="usa il trend" value="${esc(f.personal ?? "")}"></div>
+    </div>
+    <div class="field"><label for="f-location">Posizione</label><input id="f-location" placeholder="es. raccoglitore 2, pagina 5" value="${esc(f.location || "")}"></div>
+    <div class="field"><label for="f-notes">Note</label><textarea id="f-notes" rows="2">${esc(f.notes || "")}</textarea></div>
+    <p class="note">${price != null ? `Trend per questa variante: ${euro(price)} × coefficiente ${LANG[f.lang]?.short} ${coef(f.lang)}.` : "Nessun trend per questa variante: puoi inserire il tuo valore."}</p>
+    <div class="btn-row"><button class="btn primary" type="submit" id="f-save">${f.id ? "Salva" : "Aggiungi alla collezione"}</button>${f.id ? `<button class="btn ghost danger" type="button" data-action="delete-copy" data-copy="${esc(f.id)}">${f.confirmDelete ? "Tocca di nuovo per eliminare" : "Elimina copia"}</button>` : ""}</div>
+  </form>`;
+}
+function readForm() {
+  const f = sheet.form;
+  if (!$("#copy-form")) return;
+  const num = id => { const v = parseFloat(String($(id).value).replace(",", ".")); return isNaN(v) ? null : v; };
+  f.graded = $("#f-graded").checked; f.grader = $("#f-grader").value; f.grade = $("#f-grade").value.trim();
+  f.purchase = num("#f-purchase"); f.personal = num("#f-personal");
+  f.location = $("#f-location").value.trim(); f.notes = $("#f-notes").value.trim();
+}
+function bindForm(c) {
+  $("#f-graded").onchange = e => { $("#grade-fields").hidden = !e.target.checked; };
+  $("#copy-form").onsubmit = async e => {
+    e.preventDefault();
+    readForm();
+    const f = sheet.form;
+    $("#f-save").disabled = true;
+    let target = c;
+    if (f.lang !== c.lang) target = await loadCard(c.id, f.lang).catch(() => c);
+    const data = { cardKey: target.key, lang: f.lang, variant: f.variant, cond: f.cond, graded: f.graded, grader: f.graded ? f.grader : null,
+                   grade: f.graded ? f.grade : null, purchase: f.purchase, personal: f.personal, location: f.location, notes: f.notes };
+    if (f.id) Object.assign(state.copies.find(cp => cp.id === f.id), data);
+    else state.copies.push({ id: uid(), added: Date.now(), ...data });
+    recordSnapshot();
+    toast(f.id ? "Copia aggiornata" : `${target.name} aggiunta alla collezione`);
+    sheet.form = null;
+    drawSheet();
+  };
+}
+
+// ================================================================ Eventi
+document.addEventListener("click", async e => {
+  const segBtn = e.target.closest("[data-seg]");
+  if (segBtn) {
+    const id = segBtn.dataset.seg, v = segBtn.dataset.value;
+    if (id === "ed-filter") { ui.edFilter = v; render(); }
+    else if (id === "sort-sets") { ui.sort = v; render(); }
+    else if (id === "welcome-ed") { state.settings.lang = v; state.settings.scanLang = v; scan.lang = null; Store.save(); document.querySelectorAll('[data-seg="welcome-ed"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
+    else if (id === "binder-filter") { ui.setView.filter = v; render(); }
+    else if (id === "browse-ed") { ui.browse.ed = v; render(); }
+    else if (id === "search-ed") { ui.search.lang = v; if (ui.search.q) doSearch(); else render(); }
+    else if (id === "scan-variant") { scan.variant = v; document.querySelectorAll('[data-seg="scan-variant"]').forEach(b => b.setAttribute("aria-pressed", b === segBtn)); }
+    else if (id === "f-variant" || id === "f-cond" || id === "f-lang") { readForm(); sheet.form[{ "f-variant": "variant", "f-cond": "cond", "f-lang": "lang" }[id]] = v; drawSheet(); }
+    return;
+  }
+  const el = e.target.closest("[data-action],[data-tab]");
+  if (!el) return;
+  const a = el.dataset.action;
+  if (!a && el.dataset.tab) { ui.tab = el.dataset.tab; ui.setView = null; ui.browse = null; window.scrollTo(0, 0); render(); return; }
+  switch (a) {
+    case "browse": ui.browse = { ed: state.settings.lang && ["it","en","ja","ko","zh-cn","zh-tw"].includes(state.settings.lang) ? state.settings.lang : "it", serie: null }; render(); break;
+    case "open-serie": ui.browse.serie = { id: el.dataset.id, name: el.dataset.name }; window.scrollTo(0, 0); render(); break;
+    case "open-set": ui.setView = { setId: el.dataset.set, lang: el.dataset.lang, ed: el.dataset.ed || el.dataset.lang, filter: "all" }; ui.tab = "collection"; window.scrollTo(0, 0); render(); break;
+    case "open-card": openCard(el.dataset.id, el.dataset.lang, el.dataset.ed); break;
+    case "close-sheet": if (e.target === el) closeSheet(); break;
+    case "close-sheet-btn": closeSheet(); break;
+    case "new-copy": {
+      const c = sheet.card, region = regionOf(c.lang);
+      const pref = regionOf(sheet.ed) === region ? sheet.ed : (regionOf(state.settings.lang) === region ? state.settings.lang : c.lang);
+      sheet.form = { lang: pref, variant: Object.keys(c.variants).find(k => c.variants[k]) || "normal", cond: state.settings.cond, graded: false, grader: "PSA" };
+      drawSheet(); $("#copy-form")?.scrollIntoView({ behavior: "smooth", block: "start" }); break;
+    }
+    case "edit-copy": { const cp = state.copies.find(x => x.id === el.dataset.copy); sheet.form = { ...cp, grader: cp.grader || "PSA" }; drawSheet(); $("#copy-form")?.scrollIntoView({ block: "start" }); break; }
+    case "delete-copy":
+      if (!sheet.form.confirmDelete) { readForm(); sheet.form.confirmDelete = true; drawSheet(); break; }
+      state.copies = state.copies.filter(cp => cp.id !== el.dataset.copy); scan.session = scan.session.filter(cp => cp.id !== el.dataset.copy);
+      recordSnapshot(); sheet.form = null; toast("Copia eliminata"); drawSheet(); break;
+    case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta: leggo il numero", ""); break;
+    case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Aggiunta automatica: ${scan.auto ? "sì" : "no"}`; break;
+    case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const l = scan.pending.lang; scan.pending = null; await addFromScan(b, l); break; }
+    case "skip-pending": scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
+    case "cycle-variant": {
+      const c = state.copies.find(x => x.id === el.dataset.copy), card = cardOf(c);
+      const opts = Object.keys(card.variants).filter(k => card.variants[k]);
+      c.variant = opts[(opts.indexOf(c.variant) + 1) % opts.length] || c.variant;
+      recordSnapshot(); renderScanPanels(); break;
+    }
+    case "remove-copy": removeCopy(el.dataset.copy); break;
+    case "unlock-set": scan.lockSet = null; render(); break;
+    case "scan-this-set": scan.lockSet = { id: el.dataset.set, name: el.dataset.name }; scan.lang = el.dataset.ed; findCache.clear(); ui.tab = "scan"; ui.setView = null; window.scrollTo(0, 0); render(); break;
+    case "simulate": {
+      const pool = DEMO.cards.filter(c => (c.set.id === "SV2a") === (scan.lang === "ja") && (!scan.lockSet || c.set.id === scan.lockSet.id));
+      const c = pool[Math.floor(Math.random() * pool.length)];
+      if (!c) { toast("Nessuna carta di esempio per questa edizione"); break; }
+      setScanStatus(`Letto ${cardNumber(c.localId, c.set.cardCount.official)}`, "hit");
+      acceptNumber({ number: c.localId, total: c.set.cardCount.official }); break;
+    }
+    case "refresh": {
+      if (!online) { toast("Nell'anteprima i prezzi non si aggiornano"); break; }
+      el.disabled = true; el.textContent = "Aggiorno…";
+      const r = await refreshPrices((d, t) => { el.textContent = `Aggiorno ${d} di ${t}…`; });
+      toast(r.ko ? `${r.ok} prezzi aggiornati, ${r.ko} non riusciti` : `${r.ok} prezzi aggiornati`); render(); break;
+    }
+    case "backup":
+      if (await shareFile(`raccoglitore-tcg-${today()}.json`, JSON.stringify(state), "application/json")) { state.lastBackup = Date.now(); Store.save(); toast("Copia di sicurezza salvata"); if (!sheet) render(); }
+      break;
+    case "open-settings": openSettings(); break;
+    case "show-welcome": openWelcome(); break;
+    case "welcome-done": closeSheet(); break;
+    case "dismiss-install": state.settings.installDismissed = true; Store.save(); render(); break;
+    case "quick-add": {
+      const c = sheet.card, ed = quickEd(c);
+      let target = c;
+      if (ed !== c.lang) target = await loadCard(c.id, ed).catch(() => c);
+      const copy = { id: uid(), added: Date.now(), cardKey: target.key, lang: ed, variant: el.dataset.variant, cond: state.settings.cond, graded: false, grader: null, grade: null, purchase: null, personal: null, location: "", notes: "" };
+      state.copies.push(copy);
+      recordSnapshot();
+      toast(`+1 ${target.name} ${VARIANTS[copy.variant]}`, () => { state.copies = state.copies.filter(x => x.id !== copy.id); recordSnapshot(); if (sheet?.card) drawSheet(); });
+      drawSheet(); break;
+    }
+    case "csv-dups": { const ids = duplicateIds(state.copies); shareFile("doppioni.csv", csv(state.copies.filter(c => ids.has(c.id))), "text/csv"); break; }
+    case "csv-all": shareFile("collezione.csv", csv(state.copies), "text/csv"); break;
+  }
+});
+$("#settings-btn").onclick = () => openSettings();
+$("#back").onclick = () => {
+  if (ui.setView) ui.setView = null;
+  else if (ui.browse?.serie) ui.browse.serie = null;
+  else ui.browse = null;
+  render();
+};
+document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet) closeSheet(); });
+document.addEventListener("visibilitychange", () => { if (document.hidden) stopScanner(); else if (ui.tab === "scan" && !scan.cameraOff) startScanner(); });
+
+// ================================================================ Dati di esempio (solo anteprima)
+const DEMO = (() => {
+  const serie = { id: "sv", name: "Scarlatto e Violetto" }, serieSwsh = { id: "swsh", name: "Spada e Scudo" }, serieJp = { id: "SV", name: "Scarlet & Violet" };
+  const sets = {
+    "sv03.5": { id: "sv03.5", name: "Pokémon 151", serie, releaseDate: "2023-09-22", cardCount: { official: 165, total: 207 } },
+    "sv02": { id: "sv02", name: "Evoluzioni a Paldea", serie, releaseDate: "2023-06-09", cardCount: { official: 193, total: 279 } },
+    "swsh3": { id: "swsh3", name: "Fiamme Oscure", serie: serieSwsh, releaseDate: "2020-08-14", cardCount: { official: 189, total: 201 } },
+    "SV2a": { id: "SV2a", name: "Pokémon Card 151", serie: serieJp, releaseDate: "2023-06-16", cardCount: { official: 165, total: 210 } }
+  };
+  const mk = (set, localId, name, rarity, v, trend, trendHolo) => ({ id: `${set}-${localId}`, localId, name, rarity, set: sets[set], example: true,
+    variants: { normal: v.includes("n"), reverse: v.includes("r"), holo: v.includes("h"), firstEdition: false },
+    pricing: { cardmarket: { trend, avg30: +(trend * 0.96).toFixed(2), low: +(trend * 0.7).toFixed(2), "trend-holo": trendHolo ?? null, updated: today() } } });
+  const cards = [
+    mk("sv03.5","001","Bulbasaur","Common","nr",0.2,0.6), mk("sv03.5","004","Charmander","Common","nr",0.4,1.2),
+    mk("sv03.5","006","Charizard-ex","Double rare","h",9.5), mk("sv03.5","025","Pikachu","Common","nr",0.5,1.5),
+    mk("sv03.5","150","Mewtwo","Rare","nr",1.1,2.4), mk("sv03.5","151","Mew-ex","Double rare","h",5.8),
+    mk("sv03.5","199","Charizard-ex","Special illustration rare","h",95), mk("sv03.5","205","Mew-ex","Hyper rare","h",28),
+    mk("sv02","025","Pawmi","Common","nr",0.1,0.4), mk("sv02","193","Pikachu-ex","Double rare","h",3.2), mk("sv02","269","Magnemite","Illustration rare","h",4.4),
+    mk("swsh3","136","Furret","Uncommon","nr",0.08,0.21), mk("swsh3","020","Charizard-VMAX","Ultra rare","h",22),
+    mk("SV2a","006","Charizard ex","RR","h",8), mk("SV2a","201","Charizard ex","SAR","h",70)
+  ];
+  return { sets, cards, series: [serieSwsh, serie], serieJp };
+})();
+function demoApi(lang, path, params) {
+  const brief = c => ({ id: c.id, localId: c.localId, name: c.name, image: "" });
+  const isJp = lang === "ja";
+  const pool = DEMO.cards.filter(c => (c.set.id === "SV2a") === isJp);
+  const [kind, rawId] = path.split("/");
+  const id = rawId ? decodeURIComponent(rawId) : null;
+  if (kind === "cards" && id) { const c = DEMO.cards.find(x => x.id === id); if (!c) throw new NotFound("Non trovato nel catalogo"); return JSON.parse(JSON.stringify(c)); }
+  if (kind === "cards") {
+    if (params?.localId) { const n = params.localId.replace("eq:", ""); return pool.filter(c => c.localId === n).map(brief); }
+    if (params?.name) { const q = params.name.toLowerCase(); return pool.filter(c => c.name.toLowerCase().includes(q)).map(brief); }
+    return pool.map(brief);
+  }
+  if (kind === "sets" && id) { const s = DEMO.sets[id]; if (!s) throw new NotFound("Non trovato nel catalogo"); return { ...s, cards: DEMO.cards.filter(c => c.set.id === id).map(brief) }; }
+  if (kind === "sets") return Object.values(DEMO.sets).filter(s => (s.id === "SV2a") === isJp);
+  if (kind === "series" && id) return { id, name: id, sets: Object.values(DEMO.sets).filter(s => s.serie.id === id) };
+  if (kind === "series") return isJp ? [DEMO.serieJp] : DEMO.series;
+  throw new NotFound("Non trovato nel catalogo");
+}
+async function seedDemo() {
+  const add = async (id, lang, variant, cond, extra) => {
+    const card = await loadCard(id, lang);
+    await ensureSet(card.setId, card.lang);
+    state.copies.push({ id: uid(), added: Date.now() + state.copies.length, cardKey: card.key, lang, variant, cond, graded: false, example: true, ...extra });
+  };
+  await add("sv03.5-006", "it", "holo", "NM");
+  await add("sv03.5-006", "it", "holo", "EX");
+  await add("sv03.5-199", "en", "holo", "NM", { graded: true, grader: "PSA", grade: "10", personal: 240 });
+  await add("sv03.5-025", "it", "reverse", "NM");
+  await add("sv03.5-025", "it", "reverse", "NM");
+  await add("sv03.5-001", "it", "normal", "NM");
+  await add("sv03.5-004", "it", "normal", "LP");
+  await add("sv03.5-151", "it", "holo", "NM", { location: "Raccoglitore 1, pagina 17" });
+  await add("sv02-193", "it", "holo", "NM");
+  await add("swsh3-136", "it", "normal", "NM");
+  await add("swsh3-136", "it", "reverse", "EX");
+  await add("sv03.5-150", "en", "reverse", "NM");
+  await add("SV2a-201", "ja", "holo", "NM", { purchase: 55 });
+  await add("SV2a-006", "ja", "holo", "NM");
+  const base = total(state.copies);
+  const days = [28, 24, 20, 16, 12, 8, 4, 0];
+  state.snapshots = days.map((d, i) => ({ day: new Date(Date.now() - d * 864e5).toISOString().slice(0, 10), value: +(base * [0.84, 0.88, 0.86, 0.9, 0.93, 0.92, 0.97, 1][i]).toFixed(2), copies: state.copies.length }));
+}
+
+// ================================================================ Avvio
+(async function start() {
+  render();
+  const saved = await Store.load();
+  if (saved) {
+    // Anche l'archivio del telefono passa dal controllo. Se qualcosa non torna, l'originale resta da parte e non va perso.
+    try {
+      const { state: clean, dropped } = sanitizeState(saved);
+      if (dropped) Store.keep("state-prima-del-controllo", saved);
+      state = clean;
+    } catch {
+      Store.keep("state-prima-del-controllo", saved);
+      state = { ...state, ...saved, settings: { ...state.settings, ...(saved.settings || {}) } };
+    }
+  }
+  if (isPreview) {
+    await checkOnline();
+    if (!online && !state.copies.length) await seedDemo();
+  }
+  try { if (navigator.storage?.persist) navigator.storage.persist(); } catch {}
+  if ("serviceWorker" in navigator && location.protocol === "https:" && !isPreview) navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (isPreview) $("#help-btn").href = GUIDE_URL;
+  render();
+  if (!state.settings.onboarded) openWelcome();
+  setIndex(state.settings.scanLang || state.settings.lang);
+  if (online && state.copies.length && Date.now() - (state.lastRefresh || 0) > 20 * 3600e3) { await refreshPrices(); render(); }
+  else if (state.copies.length) recordSnapshot();
+})();
+</script>
+
+</body>
+</html>

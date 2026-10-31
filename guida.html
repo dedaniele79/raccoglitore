@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self'; font-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Raccoglitore">
+<meta name="theme-color" content="#f2f3fa" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0f22" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,-apple-system,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>Guida Raccoglitore TCG</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Layout: colonna di lettura con indice in cima; ogni capitolo è una sezione con titolo e passi numerati */
+:root {
+  --bg: #f2f3fa; --surface: #ffffff; --sunk: #e8eaf5; --ink: #161a33; --muted: #5c6286; --line: #dcdff0;
+  --accent: #3b4cca; --accent-soft: #e3e6fb; --gold: #f5b800; --gold-ink: #2a1f00; --frame: #f7c724; --warn: #c66a00;
+  --shadow: 0 1px 2px rgba(22, 26, 51, .06), 0 6px 18px rgba(22, 26, 51, .07);
+  --holo: linear-gradient(115deg, #7fd3ff 0%, #b49bff 22%, #ff9ad5 42%, #ffe48a 62%, #8ff0c4 80%, #7fd3ff 100%);
+  --font-display: "Baloo 2", "Avenir Next Rounded", system-ui, sans-serif;
+  --font-body: "Nunito", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #0c0f22; --surface: #161a36; --sunk: #10132a; --ink: #eef0ff; --muted: #9ba1c9; --line: #272c53; --accent: #8d98ff; --accent-soft: #232a5c; --gold: #ffd23f; --frame: #e7b912; --warn: #f2a23c; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #0c0f22; --surface: #161a36; --sunk: #10132a; --ink: #eef0ff; --muted: #9ba1c9; --line: #272c53; --accent: #8d98ff; --accent-soft: #232a5c; --gold: #ffd23f; --frame: #e7b912; --warn: #f2a23c; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35); color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 720px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 64px; display: grid; gap: 22px; }
+.hero { border-radius: 22px; padding: 7px; background: var(--frame); box-shadow: var(--shadow); }
+.hero-inner { border-radius: 16px; padding: 22px 18px; color: #fff; position: relative; overflow: hidden; background: radial-gradient(120% 90% at 100% 0%, #5468ff 0%, #2a3aa8 45%, #19226b 100%); }
+.hero-inner::after { content: ""; position: absolute; inset: 0; background: var(--holo); mix-blend-mode: soft-light; opacity: .55; pointer-events: none; }
+.hero-inner > * { position: relative; z-index: 1; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 38px; line-height: 1.05; margin: 4px 0 8px; text-wrap: balance; }
+.hero p { margin: 0; max-width: 52ch; }
+.hero .cta { display: inline-flex; margin-top: 14px; background: var(--gold); color: var(--gold-ink); font-weight: 800; text-decoration: none; padding: 10px 18px; border-radius: 999px; }
+nav.toc { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); padding: 14px 16px; }
+nav.toc b { font-family: var(--font-display); font-size: 18px; }
+nav.toc ol { margin: 6px 0 0; padding-left: 22px; columns: 2 220px; column-gap: 24px; }
+nav.toc a { color: var(--accent); font-weight: 700; text-decoration: none; }
+section.chap { background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); padding: 18px; scroll-margin-top: 12px; }
+h2 { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.15; margin: 0 0 8px; text-wrap: balance; display: flex; gap: 10px; align-items: center; }
+h2 .n { flex: none; width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: var(--gold-ink); display: grid; place-items: center; font-size: 17px; }
+h3 { font-size: 17px; margin: 18px 0 4px; }
+p { margin: 8px 0; max-width: 65ch; }
+ol.steps, ul.points { margin: 8px 0; padding-left: 22px; }
+ol.steps li, ul.points li { margin: 6px 0; }
+.tip { border-radius: 12px; padding: 10px 12px; background: var(--accent-soft); margin: 10px 0; }
+.warn { border-radius: 12px; padding: 10px 12px; background: color-mix(in srgb, var(--warn) 15%, transparent); margin: 10px 0; }
+.tip b, .warn b { display: block; }
+kbd, .k { font-family: var(--font-body); font-weight: 800; background: var(--sunk); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+code, .num { font-family: var(--font-mono); font-size: .92em; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; }
+.tablebox { overflow-x: auto; margin: 10px 0; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; }
+details { border-top: 1px solid var(--line); padding: 10px 0; }
+details:first-of-type { border-top: 0; }
+summary { font-weight: 800; cursor: pointer; }
+.foot { text-align: center; color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+</style>
+
+<div class="wrap">
+  <header class="hero"><div class="hero-inner">
+    <div class="eyebrow">Guida all'uso · versione 1.3 · aggiornata il 31 ottobre 2026</div>
+    <h1>Raccoglitore TCG</h1>
+    <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
+    <a class="cta" href="./">Apri l'app</a>
+  </div></header>
+
+  <nav class="toc" aria-label="Indice"><b>Indice</b>
+    <ol>
+      <li><a href="#installazione">Installazione</a></li>
+      <li><a href="#primo-avvio">Primo avvio</a></li>
+      <li><a href="#scansione">Scansione veloce</a></li>
+      <li><a href="#collezione">La collezione</a></li>
+      <li><a href="#carta">La scheda della carta</a></li>
+      <li><a href="#valore">Il valore</a></li>
+      <li><a href="#scambi">Doppioni e scambi</a></li>
+      <li><a href="#cerca">Cercare nel catalogo</a></li>
+      <li><a href="#backup">Copia di sicurezza</a></li>
+      <li><a href="#sicurezza">Sicurezza e privacy</a></li>
+      <li><a href="#problemi">Problemi e domande</a></li>
+      <li><a href="#novita">Novità</a></li>
+    </ol>
+  </nav>
+
+  <section class="chap" id="installazione">
+    <h2><span class="n">1</span>Installazione</h2>
+    <p>Raccoglitore è una web app: si apre da Safari e si aggiunge alla schermata Home. Non passa dall'App Store, non scade e non va mai reinstallata.</p>
+    <h3>Mettere l'app online (una volta sola, dal computer)</h3>
+    <ol class="steps">
+      <li>Crea un account gratuito su <b>github.com</b>, se non ce l'hai.</li>
+      <li>Tocca <span class="k">+</span> › <span class="k">New repository</span>. Nome: <code>raccoglitore</code>. Visibilità: <b>Public</b>. Crea.</li>
+      <li>Nella pagina del repository scegli <span class="k">Add file</span> › <span class="k">Upload files</span> e trascina tutto il contenuto della cartella “01 Web app da mettere online”, comprese le cartelle <code>ocr</code> e <code>fonts</code>. Conferma con <span class="k">Commit changes</span>.</li>
+      <li>Vai in <span class="k">Settings</span> › <span class="k">Pages</span>. In <i>Source</i> scegli <b>Deploy from a branch</b>, branch <b>main</b>, cartella <b>/ (root)</b>, poi <span class="k">Save</span>.</li>
+      <li>Dopo uno o due minuti l'app è all'indirizzo <code>https://&lt;tuo-utente&gt;.github.io/raccoglitore/</code>.</li>
+    </ol>
+    <div class="tip"><b>I tuoi dati non finiscono online</b>Su GitHub c'è solo il programma. La collezione resta salvata sul tuo iPhone.</div>
+    <h3>Aggiungerla all'iPhone</h3>
+    <ol class="steps">
+      <li>Apri l'indirizzo con <b>Safari</b>.</li>
+      <li>Tocca <span class="k">Condividi</span> (il quadrato con la freccia) › <span class="k">Aggiungi alla schermata Home</span> › <span class="k">Aggiungi</span>.</li>
+      <li>Apri l'app dall'icona: si apre a tutto schermo. Al primo uso della scansione consenti l'accesso alla fotocamera.</li>
+    </ol>
+    <h3>Aggiornare l'app</h3>
+    <p>Quando ricevi una nuova versione, carica i nuovi file su GitHub sopra i vecchi (<span class="k">Add file</span> › <span class="k">Upload files</span>). L'iPhone la scarica da solo alla prima apertura con la connessione; se non la vedi, chiudi l'app e riaprila. La collezione non si perde.</p>
+  </section>
+
+  <section class="chap" id="primo-avvio">
+    <h2><span class="n">2</span>Primo avvio</h2>
+    <p>Alla prima apertura compare il benvenuto. Scegli l'<b>edizione</b> che collezioni di più (IT, EN, JP, KR, CN): sarà proposta per la scansione e per le nuove copie. Puoi cambiarla quando vuoi da <span class="k">⚙︎ Impostazioni</span>, in alto a destra.</p>
+    <p>In alto a destra ci sono sempre due pulsanti: <span class="k">?</span> apre questa guida, <span class="k">⚙︎</span> apre le impostazioni (edizione e condizione predefinite, coefficienti per edizione, copia di sicurezza).</p>
+  </section>
+
+  <section class="chap" id="scansione">
+    <h2><span class="n">3</span>Scansione veloce</h2>
+    <p>La scansione è pensata per archiviare molte carte di fila senza toccare lo schermo. L'app legge il numero stampato in basso sulla carta (per esempio <span class="num">025/165</span>), trova la carta nel catalogo e la aggiunge.</p>
+    <h3>Prima di iniziare</h3>
+    <ul class="points">
+      <li><b>Dividi le carte in pile</b>: normali, reverse, holo. La variante non si riconosce dalla foto, quindi la imposti una volta per pila.</li>
+      <li>Se puoi, dividi anche per <b>espansione</b>: la ricerca è più sicura e l'aggiunta resta automatica.</li>
+      <li>Lavora con una luce uniforme, senza riflessi sulla parte bassa della carta.</li>
+    </ul>
+    <h3>Come si fa</h3>
+    <ol class="steps">
+      <li>Tocca il pulsante giallo <span class="k">Scansiona</span> al centro della barra in basso.</li>
+      <li>Sotto la fotocamera scegli <b>Edizione</b>, <b>Condizione</b> e <b>Variante</b> della pila che stai per scansionare.</li>
+      <li>Tieni la carta dentro la cornice gialla, con il numero nel riquadro tratteggiato in basso. Avvicina la carta finché la cornice è piena.</li>
+      <li>Quando l'app legge lo stesso numero due volte di fila, suona e cerca la carta. Se è unica, la aggiunge da sola e la mostra nella lista <b>Questa sessione</b>.</li>
+      <li>Togli la carta e metti la successiva. La stessa carta non viene aggiunta due volte finché resta nell'inquadratura; per una seconda copia uguale, toglila e rimettila.</li>
+    </ol>
+    <h3>Quando più carte hanno lo stesso numero</h3>
+    <p>Compare il riquadro <b>Quale carta…?</b> con le immagini: tocca quella giusta. L'espansione che stai già scansionando viene proposta per prima; se l'ultima carta aggiunta era della stessa espansione, l'app sceglie da sola.</p>
+    <h3>Scansionare una sola espansione</h3>
+    <p>Apri l'espansione dalla collezione e tocca <span class="k">Scansiona carte di questa espansione</span>. Ogni numero porta a una sola carta e l'aggiunta è sempre automatica: è il modo più veloce per archiviare un set completo.</p>
+    <h3>Correggere</h3>
+    <ul class="points">
+      <li>Dopo ogni aggiunta compare <span class="k">Annulla</span> per qualche secondo.</li>
+      <li>Nella lista della sessione tocca la <b>variante</b> per cambiarla (Normale → Reverse → Holo) e <span class="k">✕</span> per togliere la carta.</li>
+      <li><span class="k">Pausa</span> ferma la lettura; <span class="k">Aggiunta automatica: no</span> ti fa confermare ogni carta.</li>
+    </ul>
+    <h3>Senza fotocamera</h3>
+    <p>Scrivi il numero nel campo <i>Oppure scrivi il numero</i> (per esempio <span class="num">25/165</span>) e tocca <span class="k">Aggiungi</span>. Puoi anche scattare una foto della carta.</p>
+    <div class="tip"><b>La prima volta serve la connessione</b>Il lettore del numero si scarica alla prima scansione (alcuni MB). Poi è più veloce.</div>
+  </section>
+
+  <section class="chap" id="collezione">
+    <h2><span class="n">4</span>La collezione</h2>
+    <p>La scheda <b>Collezione</b> è ordinata come nei negozi: <b>edizione</b> (IT, EN, JP, KR, CN), poi <b>serie</b> (Mega, Scarlatto e Violetto, Spada e Scudo…), poi <b>espansione</b> con la data d'uscita.</p>
+    <ul class="points">
+      <li>In cima vedi il <b>valore totale</b>, le copie, le carte diverse e l'andamento degli ultimi 30 giorni.</li>
+      <li>Le pillole <b>Tutte · IT · EN · JP…</b> mostrano una sola edizione. <b>Più recenti · Valore · Completamento</b> cambiano l'ordine delle espansioni.</li>
+      <li>L'anello di ogni espansione indica la percentuale di carte possedute in quell'edizione. Un'espansione completa diventa olografica.</li>
+      <li><b>Cerca nella tua collezione</b> trova subito una carta che hai, per nome, numero o espansione.</li>
+      <li><span class="k">Tutte le espansioni</span> mostra l'intero catalogo per edizione e serie, anche le espansioni dove non hai ancora carte.</li>
+    </ul>
+    <h3>Il raccoglitore</h3>
+    <p>Toccando un'espansione si apre il raccoglitore: pagine da 9 tasche, come quelli veri. Le carte possedute hanno il bordo oro e il numero di copie; le mancanti sono grigie. Con <b>Mancanti</b> vedi la lista di quello che ti manca.</p>
+  </section>
+
+  <section class="chap" id="carta">
+    <h2><span class="n">5</span>La scheda della carta</h2>
+    <p>Tocca una carta ovunque nell'app per aprire la sua scheda: immagine, espansione, numero, rarità in italiano, prezzi Cardmarket e le tue copie.</p>
+    <ul class="points">
+      <li><span class="k">+1 Normale</span>, <span class="k">+1 Reverse</span>, <span class="k">+1 Holo</span> aggiungono una copia con un tocco, con l'edizione e la condizione predefinite.</li>
+      <li><span class="k">Altre opzioni</span> apre il modulo completo: edizione, variante, condizione, carta gradata (ente, voto, certificato), prezzo pagato, valore tuo, posizione nel raccoglitore, note.</li>
+      <li>Tocca una delle <b>tue copie</b> per modificarla o eliminarla (l'eliminazione chiede una seconda conferma).</li>
+      <li><span class="k">Vedi le offerte su Cardmarket</span> apre la ricerca della carta su Cardmarket.</li>
+    </ul>
+  </section>
+
+  <section class="chap" id="valore">
+    <h2><span class="n">6</span>Il valore</h2>
+    <p>Il valore di ogni copia è il <b>trend Cardmarket</b> in euro della sua variante, moltiplicato per il <b>coefficiente</b> della sua edizione. Se inserisci un <b>valore tuo</b> nella copia, vale quello.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Variante</th><th>Prezzo usato</th></tr></thead>
+      <tbody>
+        <tr><td>Normale, 1ª edizione</td><td>Trend Cardmarket</td></tr>
+        <tr><td>Reverse</td><td>Trend Cardmarket foil</td></tr>
+        <tr><td>Holo</td><td>Trend foil se la carta esiste anche normale, altrimenti trend</td></tr>
+      </tbody>
+    </table></div>
+    <p>I prezzi si aggiornano da soli una volta al giorno all'apertura; nella scheda <b>Valore</b> puoi aggiornarli subito. Il grafico mostra l'andamento giorno per giorno.</p>
+    <div class="warn"><b>Il trend mescola lingue e condizioni</b>Cardmarket calcola il trend su tutte le vendite. Se le carte italiane si vendono meno delle inglesi, imposta in Impostazioni un coefficiente IT di, per esempio, 0,8.</div>
+  </section>
+
+  <section class="chap" id="scambi">
+    <h2><span class="n">7</span>Doppioni e scambi</h2>
+    <p>Per ogni carta, edizione e variante resta in collezione una copia: prima la gradata, poi quella in condizione migliore, poi la prima inserita. Le altre sono <b>doppioni</b> e le trovi nella scheda <b>Scambi</b> con il loro valore.</p>
+    <p><span class="k">Esporta doppioni</span> ed <span class="k">Esporta tutto</span> creano un file CSV (si apre con Excel o Numbers) da condividere o salvare.</p>
+  </section>
+
+  <section class="chap" id="cerca">
+    <h2><span class="n">8</span>Cercare nel catalogo</h2>
+    <p>La scheda <b>Cerca</b> trova qualsiasi carta del catalogo per nome, nell'edizione scelta. Il nome va scritto nella lingua dell'edizione (per esempio “Pikachu” va bene in tutte, “Dracaufeu” solo in francese).</p>
+  </section>
+
+  <section class="chap" id="backup">
+    <h2><span class="n">9</span>Copia di sicurezza</h2>
+    <p>La collezione è salvata solo sull'iPhone, dentro l'app. Se togli l'app dalla schermata Home, i dati si cancellano.</p>
+    <ol class="steps">
+      <li>Apri <span class="k">⚙︎ Impostazioni</span> › <span class="k">Salva copia</span>.</li>
+      <li>Scegli <b>Salva su File</b> e una cartella di iCloud Drive o OneDrive.</li>
+      <li>Per ripristinare (anche su un altro iPhone): <span class="k">⚙︎ Impostazioni</span> › <span class="k">Ripristina da copia</span> e scegli il file.</li>
+    </ol>
+    <p>Il ripristino sostituisce la collezione sul telefono. Subito dopo compare <span class="k">Annulla</span> per qualche secondo, se hai scelto il file sbagliato.</p>
+    <p>Se hai almeno 10 copie e non salvi da due settimane, l'app te lo ricorda in cima alla collezione.</p>
+  </section>
+
+  <section class="chap" id="sicurezza">
+    <h2><span class="n">10</span>Sicurezza e privacy</h2>
+    <p>Raccoglitore non ha account, password né un server suo. Tutto quello che inserisci resta sull'iPhone.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Cosa</th><th>Dove va</th></tr></thead>
+      <tbody>
+        <tr><td>Collezione, prezzi pagati, note</td><td>Solo sull'iPhone e nelle copie di sicurezza che salvi tu</td></tr>
+        <tr><td>Immagini della fotocamera e foto</td><td>Lette sul telefono, mai inviate a nessuno</td></tr>
+        <tr><td>Ricerche e numeri delle carte</td><td>Al catalogo TCGdex, che vede l'indirizzo IP ma non sa chi sei</td></tr>
+        <tr><td>Immagini delle carte</td><td>Scaricate da TCGdex e salvate sul telefono per l'uso senza rete</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Le protezioni dell'app</h3>
+    <ul class="points">
+      <li>Il lettore del numero e i caratteri sono dentro l'app: non si carica codice da altri siti e non si contatta Google.</li>
+      <li>Una regola di sicurezza (CSP) permette all'app di collegarsi solo al catalogo TCGdex e di eseguire solo il proprio codice.</li>
+      <li>Ogni copia di sicurezza viene controllata prima del ripristino: i dati non validi vengono scartati e non possono eseguire codice.</li>
+      <li>Nei file CSV i testi che Excel scambierebbe per formule vengono resi innocui.</li>
+    </ul>
+    <h3>Cosa tocca a te</h3>
+    <ul class="points">
+      <li>Tieni l'iPhone protetto da codice: i dati dell'app sono protetti come il resto del telefono.</li>
+      <li>Ripristina solo copie di sicurezza tue. Il file contiene anche prezzi pagati e note: conservalo nel tuo iCloud o OneDrive.</li>
+      <li>Il repository su GitHub è pubblico ma contiene solo il programma, nessun dato personale.</li>
+    </ul>
+  </section>
+
+  <section class="chap" id="problemi">
+    <h2><span class="n">11</span>Problemi e domande</h2>
+    <details><summary>La fotocamera non si apre</summary><p>Apri Impostazioni dell'iPhone › Safari › Fotocamera e scegli “Chiedi” o “Consenti”. Se l'app è installata sulla Home, chiudila e riaprila.</p></details>
+    <details><summary>Il numero non viene letto</summary><p>Avvicina la carta finché riempie la cornice, evita riflessi e luce radente, tieni il numero nel riquadro tratteggiato. In alternativa scrivi il numero a mano.</p></details>
+    <details><summary>“Nessuna carta con questo numero”</summary><p>Controlla l'edizione scelta: una carta giapponese va scansionata con edizione JP. Le espansioni appena uscite possono comparire nel catalogo qualche giorno dopo.</p></details>
+    <details><summary>La carta aggiunta è sbagliata</summary><p>Tocca <span class="k">Annulla</span> subito dopo, oppure <span class="k">✕</span> nella lista della sessione. Per evitarlo, usa “Scansiona carte di questa espansione”.</p></details>
+    <details><summary>Manca il prezzo di una carta</summary><p>Non tutte le carte sono vendute su Cardmarket, soprattutto le asiatiche. Inserisci un valore tuo nella copia.</p></details>
+    <details><summary>Ho cambiato iPhone</summary><p>Salva la copia di sicurezza sul vecchio, installa l'app sul nuovo e ripristina il file.</p></details>
+    <details><summary>Funziona senza connessione?</summary><p>L'app si apre e mostra la collezione anche offline. Servono la connessione per la scansione, la ricerca e l'aggiornamento dei prezzi.</p></details>
+  </section>
+
+  <section class="chap" id="novita">
+    <h2><span class="n">12</span>Novità</h2>
+    <div class="tablebox"><table>
+      <thead><tr><th>Versione</th><th>Data</th><th>Cosa cambia</th></tr></thead>
+      <tbody>
+        <tr><td>1.3</td><td>31/10/2026</td><td>Sicurezza: controllo delle copie di sicurezza con annullamento del ripristino, protezione CSP, lettore del numero e caratteri ospitati nell'app (niente codice da altri siti, niente Google Fonts), CSV protetti dalle formule, limite allo spazio usato dalle immagini.</td></tr>
+        <tr><td>1.2</td><td>31/10/2026</td><td>Benvenuto al primo avvio, pulsanti Guida e Impostazioni, ricerca nella collezione, ordinamento delle espansioni, aggiunta con un tocco (+1) dalla scheda carta, promemoria per installazione e copia di sicurezza.</td></tr>
+        <tr><td>1.1</td><td>31/10/2026</td><td>Collezione per edizione, serie ed espansione; numeri e rarità come sulla carta; nuova grafica; scansione continua con aggiunta automatica.</td></tr>
+        <tr><td>1.0</td><td>31/10/2026</td><td>Prima versione: scansione del numero, collezione, valore Cardmarket, doppioni, CSV.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <p class="foot">Raccoglitore TCG · uso personale · catalogo e prezzi da TCGdex (fonte Cardmarket). Non affiliata a The Pokémon Company, Nintendo o Cardmarket.</p>
+</div>
+
+</body>
+</html>

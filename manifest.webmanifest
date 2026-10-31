@@ -1,0 +1,25 @@
+{
+  "name": "Raccoglitore TCG",
+  "short_name": "Raccoglitore",
+  "description": "Collezione di carte Pokémon: scansione, valore Cardmarket, doppioni.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef2f6",
+  "theme_color": "#1b5d93",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
