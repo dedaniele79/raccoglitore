@@ -6,6 +6,7 @@ Uscita (cartella indicata come argomento):
   cm/info.json        data del listino e quantità
   cm/cerca.json       [idProduct, nome, idExpansion, numero] di tutte le carte singole (per collegare una carta)
   cm/p/<n>.json       prezzi per gruppi di idProduct (n = idProduct // 10000): {id: [trend, low, avg30, trendHolo, avg30Holo, avg]}
+  cm/espansioni.json  {idExpansion: [nome ricavato dai prodotti sigillati, data della prima carta]}
   cm/esempio.json     alcune righe originali, per controllo
 """
 import json, os, re, sys, urllib.request
@@ -43,6 +44,27 @@ def main(out):
                                                     r2(g.get("trend-holo")), r2(g.get("avg30-holo")), r2(g.get("avg"))]
     for b, d in buckets.items():
         json.dump(d, open(f"{out}/cm/p/{b}.json", "w"), separators=(",", ":"))
+    # Cardmarket non pubblica i nomi delle espansioni: li ricavo dai prodotti sigillati (buste, box) della stessa espansione.
+    names = {}
+    try:
+        sealed = get(f"{BASE}/productList/products_nonsingles_{GAME}.json").get("products", [])
+        strip = re.compile(r"\s*(Booster Box|Booster Display|Display|Booster Bundle|Booster Pack|Booster|Elite Trainer Box|Build & Battle Box|Collection Box|Blister|Sleeved Booster|Case|Tin|Box|Pack)\b.*$", re.I)
+        for p in sealed:
+            e, n = p.get("idExpansion"), (p.get("name") or "").strip()
+            if not e or not n:
+                continue
+            base = strip.sub("", n).strip(" -:") or n
+            if e not in names or len(base) < len(names[e]):
+                names[e] = base
+    except Exception as ex:
+        print("prodotti sigillati non disponibili:", ex)
+    first = {}
+    for p in plist:
+        d = (p.get("dateAdded") or "")[:10]
+        if d and d != "0000-00-00" and (p["idExpansion"] not in first or d < first[p["idExpansion"]]):
+            first[p["idExpansion"]] = d
+    exps = {e: [names.get(e, ""), first.get(e, "")] for e in {p.get("idExpansion") for p in plist}}
+    json.dump(exps, open(f"{out}/cm/espansioni.json", "w"), ensure_ascii=False, separators=(",", ":"))
     sample = {"chiavi_prodotti": list(products.keys()), "primi": plist[:15],
               "sawsbuck": [p for p in plist if "sawsbuck" in p.get("name", "").lower()][:40],
               "gem_pack": [p for p in plist if "gem pack" in json.dumps(p).lower()][:20]}
