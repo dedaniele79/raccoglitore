@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-AbGCw7Z5NP1pSlaCKHmCRBwbky+cETPwG108rXZBFjM=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IPZIJuGzfW1aVZ61ucF7jnA0gRRM3+GFlO1f2ZkoRxI=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -258,11 +258,13 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .copy-photo.big { width: 96px; height: 132px; border-radius: 9px; }
 .photo-edit { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .ed-pick { font: inherit; font-size: 12px; font-weight: 800; border: 0; border-radius: 999px; padding: 3px 8px; background: color-mix(in srgb, var(--rc) 16%, transparent); color: var(--rc); appearance: none; -webkit-appearance: none; min-height: 24px; }
-.chip.warn { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.chip.warn { white-space: normal; background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
 .custom-grid { display: flex; gap: 12px; align-items: flex-start; }
 .banner.family { display: flex; align-items: center; gap: 10px; background: color-mix(in srgb, var(--gold) 22%, var(--surface)); }
 .coll-switch { margin: 2px 0 0; }
 .custom-grid > img { flex: none; }
+.cm-results { max-height: 52vh; overflow: auto; border: 1px solid var(--line); border-radius: 12px; }
+.cm-results .row + .row { border-top: 1px solid var(--line); }
 .tray-item { display: flex; gap: 12px; align-items: center; padding: 10px 12px; min-width: 0; }
 .tray-item + .tray-item { border-top: 1px solid var(--line); }
 .tray-item .thumb { width: 46px; flex: none; }
@@ -344,10 +346,13 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.5";
+const APP_VERSION = "1.6";
 const APP_DATE = "31 ottobre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
+// Listino pubblico di Cardmarket, scaricato ogni notte da un'azione GitHub sul ramo "dati" del repository dell'app.
+// Si ricava dall'indirizzo dell'app (utente.github.io/repository); altrove (anteprima) non c'è.
+const CM_DATA = (() => { const m = location.hostname.match(/^([a-z0-9-]+)\.github\.io$/i), repo = location.pathname.split("/")[1]; return m && repo ? `https://raw.githubusercontent.com/${m[1]}/${repo}/dati/cm/` : null; })();
 // Lettore del numero (Tesseract.js 5.1.1): i file sono nella cartella ocr/ dell'app, non su server di terzi.
 const OCR_DIR = new URL("ocr/", location.href).href;
 
@@ -528,7 +533,7 @@ async function viewCollection(id) {
   render();
 }
 const familyBanner = () => viewing ? `<div class="banner family"><div class="grow">Stai guardando la collezione di <b>${esc(viewing.name)}</b> · condivisa il ${esc(new Date(viewing.sharedAt).toLocaleDateString("it-IT", { day: "numeric", month: "long" }))}. Qui puoi solo guardare.</div><button class="btn small" data-action="family-exit">Torna alla tua</button></div>` : "";
-const READ_ONLY_ACTIONS = new Set(["new-copy", "edit-copy", "delete-copy", "quick-add", "remove-copy", "cycle-variant", "refresh", "custom-add", "restore-hist", "backup", "remove-photo", "scan-this-set", "share-mine"]);
+const READ_ONLY_ACTIONS = new Set(["cm-link", "cm-pick", "new-copy", "edit-copy", "delete-copy", "quick-add", "remove-copy", "cycle-variant", "refresh", "custom-add", "restore-hist", "backup", "remove-photo", "scan-this-set", "share-mine"]);
 
 // Copia di sicurezza completa: collezione, impostazioni e foto.
 async function backupJSON(share) {
@@ -578,6 +583,7 @@ function cleanCard(c) {
     key: `${lang}|${id}`, id, lang, name: txt(c.name, 120), localId: txt(c.localId, 20), setId: txt(c.setId, 60), setName: txt(c.setName, 120),
     official: numIn(c.official, 0, 5000) ?? 0, rarity: txt(c.rarity, 60), illustrator: txt(c.illustrator, 80),
     image: ASSET_RE.test(c.image) ? c.image : "", variants, example: c.example === true, ...(c.custom === true ? { custom: true } : {}),
+    ...(numIn(c.cmId, 1, 1e9) ? { cmId: numIn(c.cmId, 1, 1e9), cmName: txt(c.cmName, 160) } : {}),
     cm: { trend: price("trend"), avg30: price("avg30"), low: price("low"), trendHolo: price("trendHolo"), avg30Holo: price("avg30Holo"),
           lowHolo: price("lowHolo"), updated: DATE_RE.test(cm.updated) ? cm.updated : null },
     fetched: numIn(c.fetched, 0, 1e14) ?? 0
@@ -700,6 +706,50 @@ async function ensureSet(setId, lang) {
   if (s && Date.now() - s.fetched < 30 * 864e5) return s;
   return storeSet(await api(lang, `sets/${encodeURIComponent(setId)}`), lang);
 }
+// ================================================================ Cardmarket diretto
+const CM = {
+  cache: {},
+  json(path) {
+    if (!CM_DATA) return Promise.reject(new Error("Il listino Cardmarket si usa nell'app installata"));
+    return this.cache[path] ||= fetch(CM_DATA + path, { cache: "no-cache" })
+      .then(r => { if (!r.ok) throw new Error("Listino Cardmarket non disponibile"); return r.json(); })
+      .catch(e => { delete this.cache[path]; throw e instanceof TypeError ? new Error("Nessuna connessione al listino Cardmarket") : e; });
+  },
+  info() { return this.json("info.json"); },
+  async price(id) { const b = await this.json(`p/${Math.floor(id / 10000)}.json`); return b[id] || null; }
+};
+// Prezzo dal listino Cardmarket per una carta collegata (0 nel listino = nessun dato).
+async function applyCmPrice(card) {
+  const p = await CM.price(card.cmId); if (!p) return false;
+  const info = await CM.info().catch(() => ({}));
+  const v = x => (x ? x : null);
+  card.cm = { trend: v(p[0]), low: v(p[1]), avg30: v(p[2]), trendHolo: v(p[3]), avg30Holo: v(p[4]), lowHolo: null, updated: String(info.creato || "").slice(0, 10) || today() };
+  card.fetched = Date.now();
+  return true;
+}
+// Ricerca nel listino per nome (inglese, come su Cardmarket): risultati raggruppati per espansione, i più recenti prima.
+const latinWords = t => (String(t).match(/[A-Za-zÀ-ÿ'.-]{3,}/g) || []).join(" ");
+async function cmSearch(q, code) {
+  const words = plain(q).length ? q.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/\s+/).filter(w => w.length >= 2) : [];
+  if (!words.length) return [];
+  const [list, exps] = await Promise.all([CM.json("cerca.json"), CM.json("espansioni.json").catch(() => ({}))]);
+  const hits = [];
+  for (const [id, name, exp] of list) {
+    const n = name.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+    if (words.every(w => n.includes(w))) hits.push({ id, name, exp, expName: exps[exp]?.[0] || "", expDate: exps[exp]?.[1] || "" });
+  }
+  // Prima l'espansione con lo stesso codice della carta (es. «CBB4C: Gem Pack Vol. 4»), poi le più recenti.
+  const sameCode = h => code && h.expName.toUpperCase().startsWith(String(code).toUpperCase() + ":") ? 1 : 0;
+  hits.sort((a, b) => sameCode(b) - sameCode(a) || b.expDate.localeCompare(a.expDate) || a.id - b.id);
+  const top = hits.slice(0, 60);
+  // Stesso nome nella stessa espansione: Cardmarket ha più versioni (per esempio la rara e le comuni). Le numero in ordine di prodotto.
+  const groups = {};
+  for (const h of hits) (groups[h.exp + "|" + h.name] ||= []).push(h);
+  for (const g of Object.values(groups)) if (g.length > 1) g.sort((a, b) => a.id - b.id).forEach((h, i) => { h.ver = i + 1; h.vers = g.length; });
+  await Promise.all(top.map(async h => { try { h.p = await CM.price(h.id); } catch {} }));
+  return top;
+}
+
 // Carte fuori catalogo: TCGdex non ha tutte le carte (per esempio molte buste speciali cinesi).
 // Si archiviano lo stesso con foto, nome, numero ed espansione; il valore lo inserisci tu.
 function makeCustomCard({ name, number, total, lang, setId, setName }) {
@@ -733,8 +783,9 @@ async function loadCard(id, lang, force) {
 // ================================================================ Valore e doppioni
 function marketPrice(card, variant) {
   if (!card) return null;
-  const foil = variant === "reverse" || (variant === "holo" && card.variants.normal);
-  return foil ? (card.cm.trendHolo ?? card.cm.avg30Holo) : (card.cm.trend ?? card.cm.avg30);
+  // Carta collegata a un prodotto Cardmarket: il prodotto è già la versione giusta, i prezzi "foil" sono quelli della reverse.
+  const foil = variant === "reverse" || (!card.cmId && variant === "holo" && card.variants.normal);
+  return foil ? (card.cm.trendHolo ?? card.cm.avg30Holo ?? card.cm.trend ?? card.cm.avg30) : (card.cm.trend ?? card.cm.avg30 ?? card.cm.trendHolo);
 }
 const coef = lang => state.settings.coef[lang] ?? 1;
 function copyValue(cp) {
@@ -771,6 +822,7 @@ async function refreshPrices(onProgress) {
     await Promise.all(keys.slice(i, i + 6).map(async key => {
       const c = state.cards[key];
       if (!c) { ko++; return; }
+      if (c.cmId) { try { (await applyCmPrice(c)) ? ok++ : ko++; } catch { ko++; } return; }
       if (c.custom) return;
       try {
         memo.delete(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
@@ -1755,7 +1807,7 @@ function customPanel(pend) {
   if (pend.ctx?.photo && !pend.preview) pend.preview = URL.createObjectURL(pend.ctx.photo);
   return `<section class="panel form custom-add" aria-label="Carta fuori catalogo">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b>Non è nel catalogo: aggiungila lo stesso</b><button class="btn small ghost" data-action="skip-pending">Salta</button></div>
-    <p class="note">Il catalogo TCGdex non ha questa carta (succede spesso con le buste speciali cinesi e coreane). La archivio con ${pend.preview ? "la tua foto" : "i dati che scrivi"}; il valore lo inserisci tu dalla scheda della carta.</p>
+    <p class="note">Il catalogo TCGdex non ha questa carta (succede spesso con le buste speciali cinesi e coreane). La archivio con ${pend.preview ? "la tua foto" : "i dati che scrivi"}; per il prezzo, dalla scheda della carta tocca «Collega a Cardmarket».</p>
     <div class="custom-grid">${pend.preview ? `<img class="copy-photo big" src="${esc(pend.preview)}" alt="La foto appena scattata">` : ""}
       <div class="grow" style="display:grid;gap:10px">
         <div class="field"><label for="cu-name">Nome della carta</label><input id="cu-name" value="${esc(c.name)}" placeholder="es. Sawsbuck o 萌芽鹿" autocomplete="off"></div>
@@ -2060,12 +2112,12 @@ function drawSheet() {
     const vlist = Object.entries(c.variants).filter(([, on]) => on).map(([k]) => VARIANTS[k]).join(", ");
     const priced = c.cm.trend != null || c.cm.trendHolo != null || c.cm.avg30 != null;
     const headline = marketPrice(c, Object.keys(c.variants).find(k => c.variants[k]) || "normal");
-    const cmLink = `https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${encodeURIComponent(c.name)}`;
+    const cmLink = `https://www.cardmarket.com/it/Pokemon/Products/Search?searchString=${encodeURIComponent(c.cmName ? c.cmName.replace(/\s*[[·].*$/, "") : latinWords(c.name) || c.name)}`;
     body = `
       <div class="card-hero">
         <div class="showcase ${isFoil(c) ? "foil" : ""}">${!c.image && mine.find(cp => cp.photo) ? `<div class="art"><img class="photo" data-photo="${esc(mine.find(cp => cp.photo).id)}" alt="La tua foto"></div>` : art(c, true)}</div>
         <div style="display:grid;gap:10px;min-width:0">
-          <div><div class="sub">Valore di mercato</div><div class="price-big">${euro(headline)}</div>${c.example ? `<span class="chip example">prezzo di esempio</span>` : ""}${c.custom ? `<span class="chip warn">fuori catalogo: inserisci tu il valore</span>` : ""}</div>
+          <div><div class="sub">Valore di mercato</div><div class="price-big">${euro(headline)}</div>${c.example ? `<span class="chip example">prezzo di esempio</span>` : ""}${c.custom ? `<span class="chip warn">${c.cmId ? "fuori catalogo · prezzo da Cardmarket" : CM_DATA ? "fuori catalogo: collegala a Cardmarket" : "fuori catalogo: inserisci tu il valore"}</span>` : ""}</div>
           <dl class="kv">
             <dt>Espansione</dt><dd>${esc(c.setName)}</dd>
             <dt>Numero</dt><dd class="num">${esc(cardNumber(c.localId, c.official))}</dd>
@@ -2080,9 +2132,12 @@ function drawSheet() {
           <div><span class="sub">Media 30 gg</span><span class="euro">${euro(c.cm.avg30)}</span></div>
           <div><span class="sub">${c.cm.trendHolo != null ? "Trend reverse/foil" : "Minimo"}</span><span class="euro">${euro(c.cm.trendHolo != null ? c.cm.trendHolo : c.cm.low)}</span></div>
         </div>` : `<div class="row note">Nessun prezzo Cardmarket per questa carta.</div>`}
+        ${c.cmId ? `<div class="row note" style="border-top:1px solid var(--line)">Collegata a Cardmarket: <b>${esc(c.cmName || "#" + c.cmId)}</b></div>` : ""}
+        ${CM_DATA && !viewing && (c.custom || !priced || c.cmId) ? `<button class="row" data-action="cm-link" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">${c.cmId ? "Cambia il collegamento a Cardmarket" : "Collega a Cardmarket per avere il prezzo"} <span class="chev" style="margin-left:auto">›</span></button>` : ""}
         <a class="row" href="${cmLink}" target="_blank" rel="noopener" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">Vedi le offerte su Cardmarket <span class="chev" style="margin-left:auto">›</span></a>
       </section>
-      <p class="note">Fonte: Cardmarket via TCGdex${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
+      ${sheet.cm ? cmPanel() : ""}
+      <p class="note">Fonte: ${c.cmId ? "listino Cardmarket" : "Cardmarket via TCGdex"}${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
       <h3 class="section-title">Le tue copie <small>${mine.length}</small></h3>
       ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}">${cp.photo ? `<img class="copy-photo" data-photo="${esc(cp.id)}" alt="La tua foto">` : ""}<div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
       ${viewing ? "" : sheet.form ? copyForm(c) : quickAdd(c)}`;
@@ -2092,6 +2147,29 @@ function drawSheet() {
     <div class="sheet-head"><h2>${esc(c?.name || "Carta")}</h2><button class="icon-btn" data-action="close-sheet-btn" aria-label="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     ${body}</div></div>`;
   if (sheet.form) bindForm(c);
+  const cf = $("#cm-form");
+  if (cf) cf.onsubmit = e => { e.preventDefault(); sheet.cm.q = $("#cm-q").value.trim(); runCmSearch(); };
+}
+// Pannello di collegamento a Cardmarket dentro la scheda della carta.
+function cmPanel() {
+  const m = sheet.cm;
+  const rows = (m.results || []).map(h => `<button class="row" data-action="cm-pick" data-cm="${h.id}"><div class="grow"><b>${esc(h.name)}</b><div class="sub">${esc(h.expName || "Espansione " + h.exp)}${h.expDate ? " · " + esc(itDate(h.expDate)) : ""}${h.ver ? ` · <b>versione ${h.ver} di ${h.vers}</b>` : ""}</div></div><span class="euro">${euro(h.p ? (h.p[0] || h.p[3] || h.p[5] || null) : null)}</span></button>`).join("");
+  return `<section class="panel form cm-panel" aria-label="Collega a Cardmarket">
+    <b>Collega a Cardmarket</b>
+    <p class="note">Cerca la carta com'è scritta su Cardmarket, in inglese (es. Sawsbuck). Ogni riga è un prodotto Cardmarket con il suo prezzo di oggi: scegli quello della tua carta (stessa espansione e stesso prezzo che vedi sul sito). Se la stessa carta ha più versioni, di solito la rara è quella che costa di più.</p>
+    <form class="searchbar" id="cm-form"><input id="cm-q" value="${esc(m.q)}" placeholder="Nome in inglese, es. Sawsbuck" autocomplete="off"><button class="btn primary" type="submit">Cerca</button></form>
+    ${m.msg ? `<p class="note">${esc(m.msg)}</p>` : ""}
+    ${rows ? `<div class="cm-results">${rows}</div>` : ""}
+    <button class="btn ghost small" data-action="cm-close" type="button">Chiudi</button>
+  </section>`;
+}
+async function runCmSearch() {
+  const m = sheet?.cm; if (!m) return;
+  m.msg = "Cerco nel listino Cardmarket…"; m.results = null; drawSheet();
+  try { const r = await cmSearch(m.q, sheet.card?.setId); if (sheet?.cm !== m) return; m.results = r; m.msg = r.length ? `${r.length} prodotti trovati${r.length === 60 ? " (i più recenti)" : ""}.` : "Nessun prodotto con questo nome: prova con il nome inglese."; }
+  catch (e) { m.msg = e.message; }
+  drawSheet();
+  $(".cm-panel")?.scrollIntoView({ block: "start" });
 }
 function quickEd(c) {
   const region = regionOf(c.lang);
@@ -2233,6 +2311,14 @@ document.addEventListener("click", async e => {
       recordSnapshot(); renderScanPanels(); break;
     }
     case "remove-copy": removeCopy(el.dataset.copy); break;
+    case "cm-link": { const c = sheet.card; sheet.cm = { q: latinWords(c.cmName ? c.cmName.replace(/\s*[[·].*$/, "") : c.name), results: null, msg: "" }; if (sheet.cm.q) runCmSearch(); else { drawSheet(); $(".cm-panel")?.scrollIntoView({ block: "start" }); } break; }
+    case "cm-close": sheet.cm = null; drawSheet(); break;
+    case "cm-pick": {
+      const c = sheet.card, h = sheet.cm?.results?.find(x => String(x.id) === el.dataset.cm); if (!c || !h) break;
+      c.cmId = h.id; c.cmName = `${h.name}${h.ver ? ` (versione ${h.ver} di ${h.vers})` : ""} · ${h.expName || "espansione " + h.exp}`;
+      try { await applyCmPrice(c); } catch {}
+      sheet.cm = null; recordSnapshot(); toast(`Collegata: ${euro(c.cm.trend ?? c.cm.trendHolo)}`); drawSheet(); break;
+    }
     case "custom-add": {
       const pend = scan.pending; if (!pend?.custom) break;
       const name = $("#cu-name").value.trim(), lang = $("#cu-lang").value, setId = $("#cu-set").value, numTxt = $("#cu-num").value.trim();

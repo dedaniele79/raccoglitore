@@ -74,7 +74,7 @@ a { color: var(--accent); }
 
 <div class="wrap">
   <header class="hero"><div class="hero-inner">
-    <div class="eyebrow">Guida all'uso · versione 1.5 · aggiornata il 31 ottobre 2026</div>
+    <div class="eyebrow">Guida all'uso · versione 1.6 · aggiornata il 31 ottobre 2026</div>
     <h1>Raccoglitore TCG</h1>
     <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
     <a class="cta" href="./">Apri l'app</a>
@@ -155,7 +155,10 @@ a { color: var(--accent); }
     <h3>Quando ci sono più carte possibili</h3>
     <p>Compare il riquadro <b>Quale carta…?</b> con le immagini, ordinate per somiglianza del nome: tocca quella giusta. Succede anche quando il nome letto non coincide con quello del catalogo, per evitare aggiunte sbagliate.</p>
     <h3>Carte che il catalogo non ha</h3>
-    <p>Il catalogo TCGdex non contiene tutte le carte: mancano per esempio molte buste speciali cinesi e coreane (come i <i>Gem Pack</i> cinesi, con numeri tipo <span class="num">1807/07</span>). In questi casi compare il riquadro <b>Non è nel catalogo: aggiungila lo stesso</b>, con la foto appena scattata: controlla nome, numero, edizione ed espansione e tocca <span class="k">Aggiungi con la foto</span>. La carta entra nella collezione e nel raccoglitore della sua espansione; il valore lo inserisci tu dalla scheda della carta. La volta dopo che scansioni la stessa carta, l'app la riconosce tra le tue.</p>
+    <p>Il catalogo TCGdex non contiene tutte le carte: mancano per esempio molte buste speciali cinesi e coreane (come i <i>Gem Pack</i> cinesi, con numeri tipo <span class="num">1807/07</span>). In questi casi compare il riquadro <b>Non è nel catalogo: aggiungila lo stesso</b>, con la foto appena scattata: controlla nome, numero, edizione ed espansione e tocca <span class="k">Aggiungi con la foto</span>. La carta entra nella collezione e nel raccoglitore della sua espansione. La volta dopo che scansioni la stessa carta, l'app la riconosce tra le tue.</p>
+    <h3>Il prezzo da Cardmarket</h3>
+    <p>Per le carte fuori catalogo (e per quelle senza prezzo) apri la scheda della carta e tocca <span class="k">Collega a Cardmarket per avere il prezzo</span>. Scrivi il nome come su Cardmarket, in inglese (per esempio <i>Sawsbuck</i>): l'app mostra i prodotti Cardmarket con il prezzo di oggi, mettendo per prima l'espansione con lo stesso codice della tua carta (per esempio <i>CBB4C: Gem Pack Vol. 4</i>). Scegli quello giusto: da quel momento il prezzo si aggiorna ogni giorno. Se la stessa carta compare più volte (per esempio <i>versione 7 di 7</i>), Cardmarket ne vende più versioni: scegli quella con il prezzo che vedi sul sito per la tua carta; di solito la rara è quella che costa di più. Il tasto <span class="k">Vedi le offerte su Cardmarket</span> apre la ricerca sul sito.</p>
+    <p class="note">Il listino arriva da Cardmarket ogni notte: è lo stesso listino pubblico che Cardmarket mette a disposizione, scaricato in automatico sul tuo GitHub perché l'app possa leggerlo.</p>
     <div class="tip"><b>Carte cinesi e coreane</b>Su queste carte la lingua si riconosce meno bene: prima di scansionarle scegli l'edizione (per esempio <i>Cinese semplificato</i>) al posto di <i>Automatica</i>.</div>
     <h3>Scansionare una sola espansione</h3>
     <p>Apri l'espansione dalla collezione e tocca <span class="k">Scansiona carte di questa espansione</span>: ogni numero porta a una sola carta.</p>
@@ -298,6 +301,7 @@ a { color: var(--accent); }
     <div class="tablebox"><table>
       <thead><tr><th>Versione</th><th>Data</th><th>Cosa cambia</th></tr></thead>
       <tbody>
+        <tr><td>1.6</td><td>31/10/2026</td><td>Cardmarket diretto: ogni notte l'app riceve il listino pubblico di Cardmarket. Le carte fuori catalogo (e quelle senza prezzo) si collegano al prodotto Cardmarket e hanno il prezzo aggiornato ogni giorno.</td></tr>
         <tr><td>1.5</td><td>31/10/2026</td><td>Collezioni di famiglia: condividi la tua collezione con un file e guarda quella dei familiari (con foto, valore, doppioni). Carte fuori catalogo: si aggiungono lo stesso con foto, nome, numero ed espansione. Variante riconosciuta in automatico (Auto). Foto ritagliate sui bordi della carta e raddrizzate. Numeri a quattro cifre (es. 1807/07 dei Gem Pack cinesi) e numero a mano con la tastiera completa.</td></tr>
         <tr><td>1.4</td><td>31/10/2026</td><td>Riconoscimento rifatto: cornice allineata alla fotocamera, lettura del numero anche su fondi colorati e testo bianco, lingua riconosciuta dalla carta (occidentali, giapponese, coreano, cinese), controllo del nome, pulsante per scattare. Foto di ogni carta in archivio (anche nel raccoglitore). Copia di sicurezza con le foto, promemoria dopo ogni sessione, versioni automatiche sul telefono.</td></tr>
         <tr><td>1.3</td><td>31/10/2026</td><td>Sicurezza: controllo delle copie di sicurezza con annullamento del ripristino, protezione CSP, lettore del numero e caratteri ospitati nell'app (niente codice da altri siti, niente Google Fonts), CSV protetti dalle formule, limite allo spazio usato dalle immagini.</td></tr>
