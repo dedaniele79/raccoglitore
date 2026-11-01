@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-setdH6IF4hVsrobAGIVtVlkXAPTguiBCC6sgrNRUG5M=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-dnQLCSXDSAfv2hmlXYgK4S09nNvjMhLkixIwtkD//YQ=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -859,6 +859,8 @@ const PROMO_CODE = Object.fromEntries([...Object.entries(PROMO_INTL), ...Object.
 // Espansioni con una «Collezione classica» separata nel catalogo: le carte classiche hanno numeri oltre il totale (es. 166/128).
 const CLASSIC_OF = { "30th": ["30th-c"], "cel25": ["cel25cc"] };
 const promoNum = x => parseInt(String(x).replace(/^[A-Z]+/i, ""), 10);
+// Pokémon TCG Pocket (solo nel videogioco, non carte vere): il catalogo le mescola alle altre, le tengo fuori.
+const isPocket = setId => /^[AB]\d+[a-z]?$|^P-[AB]$/.test(String(setId)) || String(setId) === "tcgp";
 function parsePromo(text) {
   const s = String(text).toUpperCase().replace(/[|\\]/g, "/");
   const fix = d => d.replace(/O/g, "0").replace(/[IL]/g, "1");
@@ -914,6 +916,7 @@ async function findByNumber(printed, lang) {
   const attempt = async l => {
     const idx = await setIndex(l);
     let sets = Object.values(idx).reverse();
+    sets = sets.filter(s => !isPocket(s.id));
     if (printed.promo) sets = sets.filter(s => s.id === printed.promo);
     else if (printed.total) sets = sets.filter(s => s.cardCount?.official === printed.total);
     else if (scan.lockSet || scan.session[0]) { const want = scan.lockSet?.id || cardOf(scan.session[0])?.setId; sets = sets.filter(s => s.id === want); }
@@ -946,12 +949,12 @@ async function findByNumber(printed, lang) {
 async function searchByName(lang, name) {
   const brief = (l, idx) => b => ({ ...b, localId: String(b.localId), setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0, catLang: l });
   const [list, idx] = await Promise.all([api(lang, "cards", { name }).catch(e => { if (lang === "en") throw e; return []; }), setIndex(lang)]);
-  let out = list.slice().reverse().map(brief(lang, idx));
+  let out = list.slice().reverse().map(brief(lang, idx)).filter(b => !isPocket(b.setId));
   if (regionOf(lang) === "intl" && lang !== "en") {
     try {
       const [en, enIdx] = await Promise.all([api("en", "cards", { name }), setIndex("en")]);
       const have = new Set(out.map(b => b.id));
-      const extra = en.slice().reverse().filter(b => !have.has(b.id)).map(brief("en", enIdx));
+      const extra = en.slice().reverse().filter(b => !have.has(b.id)).map(brief("en", enIdx)).filter(b => !isPocket(b.setId));
       // Le carte solo inglesi vanno al loro posto: le espansioni del catalogo sono in ordine di uscita (le più recenti prima).
       const pos = Object.fromEntries(Object.keys(enIdx).map((id, i) => [id, i]));
       out = [...out, ...extra].map((b, i) => ({ b, i, p: pos[b.setId] ?? -1 })).sort((x, y) => (y.p - x.p) || (x.i - y.i)).map(x => x.b);
@@ -1212,7 +1215,7 @@ async function renderBrowse(banner) {
       let list;
       try { list = await api(lang, "series"); } catch { list = await api(fallbackLang(lang), "series"); }
       if (ui.browse !== b) return;
-      main.innerHTML = banner + edSeg + `<section class="panel">${list.slice().reverse().map(s => `<button class="row" data-action="open-serie" data-id="${esc(s.id)}" data-name="${esc(s.name)}"><span class="dot" ${edStyle(b.ed)}></span><div class="grow name">Serie ${esc(s.name)}</div><span class="chev">›</span></button>`).join("")}</section>`;
+      main.innerHTML = banner + edSeg + `<section class="panel">${list.slice().reverse().filter(s => !isPocket(s.id)).map(s => `<button class="row" data-action="open-serie" data-id="${esc(s.id)}" data-name="${esc(s.name)}"><span class="dot" ${edStyle(b.ed)}></span><div class="grow name">Serie ${esc(s.name)}</div><span class="chev">›</span></button>`).join("")}</section>`;
     }
   } catch (e) {
     main.innerHTML = banner + (b.serie ? "" : edSeg) + `<section class="panel empty"><h2>Catalogo non disponibile</h2><p class="note">${esc(e.message)}</p></section>`;
@@ -1442,7 +1445,7 @@ async function knownTotals(langs) {
   const key = langs.join(",");
   if (totalsCache[key]) return totalsCache[key];
   const s = new Set();
-  for (const l of langs) Object.values(await setIndex(l)).forEach(x => x.cardCount?.official && s.add(x.cardCount.official));
+  for (const l of langs) Object.values(await setIndex(l)).forEach(x => !isPocket(x.id) && x.cardCount?.official && s.add(x.cardCount.official));
   if (s.size) totalsCache[key] = s;
   return s;
 }
