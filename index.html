@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ISNTWY8xdg/Bm90AzuLhX6TNKikgqi4Heq9YUedNgPw=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-setdH6IF4hVsrobAGIVtVlkXAPTguiBCC6sgrNRUG5M=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -282,6 +282,9 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 @keyframes flash { from { background: color-mix(in srgb, var(--gold) 35%, transparent); } }
 @media (prefers-reduced-motion: reduce) { .tray-item.new { animation: none; } }
 .tray-actions { display: flex; gap: 6px; flex: none; }
+.copy-row { padding: 0 10px 0 0; gap: 4px; }
+.copy-open { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 6px 12px 14px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+.copy-del { flex: none; width: 40px; min-width: 40px; padding: 0; justify-content: center; }
 
 /* Scheda carta */
 .sheet-wrap { position: fixed; inset: 0; z-index: 20; background: rgba(5, 6, 15, .55); display: flex; align-items: flex-end; justify-content: center; }
@@ -357,8 +360,8 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.6.1";
-const APP_DATE = "31 ottobre 2026";
+const APP_VERSION = "1.7";
+const APP_DATE = "1 novembre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
 // Listino pubblico di Cardmarket, scaricato ogni notte da un'azione GitHub sul ramo "dati" del repository dell'app.
@@ -849,7 +852,29 @@ async function refreshPrices(onProgress) {
 }
 
 // ================================================================ Dal numero stampato alla carta
+// Carte promo: il numero non ha il totale. Occidentali «MEP IT 101», «SVP EN 085», «SWSH123»; giapponesi «101/M-P».
+const PROMO_INTL = { MEP: "mep", SVP: "svp", SWSH: "swshp", SM: "smp", XY: "xyp", BW: "bwp" };
+const PROMO_JA = { "M-P": "M-P", "SV-P": "SV-P" };
+const PROMO_CODE = Object.fromEntries([...Object.entries(PROMO_INTL), ...Object.entries(PROMO_JA)].map(([k, v]) => [v, k]));
+// Espansioni con una «Collezione classica» separata nel catalogo: le carte classiche hanno numeri oltre il totale (es. 166/128).
+const CLASSIC_OF = { "30th": ["30th-c"], "cel25": ["cel25cc"] };
+const promoNum = x => parseInt(String(x).replace(/^[A-Z]+/i, ""), 10);
+function parsePromo(text) {
+  const s = String(text).toUpperCase().replace(/[|\\]/g, "/");
+  const fix = d => d.replace(/O/g, "0").replace(/[IL]/g, "1");
+  // Sulla carta il lettore spesso unisce tutto: «GMEPIT101» (G è il marchio di regolamento). MEP, SVP e SWSH sono abbastanza
+  // lunghi da cercarli anche attaccati; SM, XY e BW solo da soli.
+  let m = s.match(/(MEP|SVP|SWSH|PROMO)[\s\-#.]*(?:(EN|IT|FR|DE|ES|PT)[\s\-#.]*)?([0-9OIL]{1,3})(?![0-9])/) || s.match(/(?<![A-Z])(SM|XY|BW)\s*[-#.]?\s*(?:(EN|IT|FR|DE|ES|PT)\s*)?([0-9OIL]{2,3})(?![0-9A-Z])/);
+  if (m && /[0-9]/.test(m[3])) {
+    const n = parseInt(fix(m[3]), 10); if (!n) return null;
+    return { number: String(n).padStart(3, "0"), total: null, promo: PROMO_INTL[m[1] === "PROMO" ? "MEP" : m[1]], region: "intl", ed: m[2] ? m[2].toLowerCase() : null };
+  }
+  m = s.match(/([0-9]{1,3})\s*\/\s*(M|SV)\s*-?\s*P(?![A-Z])/);
+  if (m) { const n = parseInt(m[1], 10); if (!n) return null; return { number: String(n).padStart(3, "0"), total: null, promo: PROMO_JA[m[2] + "-P"], region: "jp", ed: "ja" }; }
+  return null;
+}
 function parseNumber(text) {
+  const promo = parsePromo(text); if (promo) return promo;
   // Separatori accettati: / - . , oppure uno spazio (sulla tastiera numerica dell'iPhone la barra non c'è).
   const m = String(text).toUpperCase().replace(/[|\\]/g, "/").match(/(?<![0-9A-Z])([A-Z]{0,3}[0-9]{1,4})\s*(?:[\/\-.,]|\s)\s*([0-9]{1,3})(?![0-9])/);
   if (m) {
@@ -860,7 +885,9 @@ function parseNumber(text) {
   const plain = String(text).trim();
   return /^[A-Z0-9]{1,8}$/i.test(plain) ? { number: plain, total: null } : null;
 }
-const numLabel = p => p.total ? cardNumber(p.number, p.total) : p.number;
+const numLabel = p => p.promo ? (p.region === "jp" ? `${p.number}/${PROMO_CODE[p.promo]}` : `${PROMO_CODE[p.promo]} ${p.number}`) : p.total ? cardNumber(p.number, p.total) : p.number;
+// Etichetta di un numero letto dalla fotocamera (normale o promo).
+const candLabel = c => c.promo ? numLabel({ number: String(c.n).padStart(3, "0"), promo: c.promo, region: c.region }) : cardNumber(String(c.n), c.t);
 function lookupForms(num) {
   const forms = [num];
   const trimmed = num.replace(/^0+/, "");
@@ -881,20 +908,30 @@ const sameLocal = (lid, printed) => {
   return /^\d+$/.test(a) && /^\d+$/.test(b) ? parseInt(a, 10) === parseInt(b, 10) : a === b || a.replace(/^0+/, "") === b.replace(/^0+/, "");
 };
 async function findByNumber(printed, lang) {
+  if (printed.region === "jp") lang = "ja";
   const ck = `${lang}|${numLabel(printed)}`;
   if (findCache.has(ck)) return findCache.get(ck);
   const attempt = async l => {
     const idx = await setIndex(l);
     let sets = Object.values(idx).reverse();
-    if (printed.total) sets = sets.filter(s => s.cardCount?.official === printed.total);
+    if (printed.promo) sets = sets.filter(s => s.id === printed.promo);
+    else if (printed.total) sets = sets.filter(s => s.cardCount?.official === printed.total);
     else if (scan.lockSet || scan.session[0]) { const want = scan.lockSet?.id || cardOf(scan.session[0])?.setId; sets = sets.filter(s => s.id === want); }
     else sets = [];
     if (scan.lockSet) sets.sort((x, y) => (y.id === scan.lockSet.id) - (x.id === scan.lockSet.id));
-    const items = [];
+    const items = [], want = parseInt(printed.number, 10);
+    const same = printed.promo ? (lid => promoNum(lid) === promoNum(printed.number)) : (lid => sameLocal(lid, printed.number));
     for (const s of sets.slice(0, 10)) {
       let d; try { d = await setData(l)(s.id); } catch { continue; }
-      for (const c of d.cards || []) if (sameLocal(c.localId, printed.number))
+      for (const c of d.cards || []) if (same(c.localId))
         items.push({ ...c, localId: String(c.localId), setId: s.id, setName: d.name || s.name, official: d.cardCount?.official || s.cardCount?.official || 0 });
+      // Numero oltre le carte dell'espansione (es. 166/128 nel 30° Anniversario): è una carta della Collezione classica.
+      const maxN = Math.max(0, ...(d.cards || []).map(c => /^\d+$/.test(c.localId) ? parseInt(c.localId, 10) : 0));
+      if (!printed.promo && want > maxN && CLASSIC_OF[s.id]) for (const cid of CLASSIC_OF[s.id]) {
+        if (!idx[cid]) continue;
+        let cd; try { cd = await setData(l)(cid); } catch { continue; }
+        for (const c of cd.cards || []) items.push({ ...c, localId: String(c.localId), setId: cid, setName: cd.name || idx[cid].name, official: 0, classic: true });
+      }
     }
     return { lang: l, items };
   };
@@ -902,6 +939,25 @@ async function findByNumber(printed, lang) {
   if (!res.items.length && fallbackLang(lang) !== lang) res = await attempt(fallbackLang(lang));
   if (res.items.length) findCache.set(ck, res);
   return res;
+}
+
+// Ricerca per nome nel catalogo dell'edizione. Il catalogo italiano (e francese, tedesco…) a volte è incompleto:
+// aggiungo le carte che ci sono solo in quello inglese (stesso numero e stessa carta, nome in inglese).
+async function searchByName(lang, name) {
+  const brief = (l, idx) => b => ({ ...b, localId: String(b.localId), setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0, catLang: l });
+  const [list, idx] = await Promise.all([api(lang, "cards", { name }).catch(e => { if (lang === "en") throw e; return []; }), setIndex(lang)]);
+  let out = list.slice().reverse().map(brief(lang, idx));
+  if (regionOf(lang) === "intl" && lang !== "en") {
+    try {
+      const [en, enIdx] = await Promise.all([api("en", "cards", { name }), setIndex("en")]);
+      const have = new Set(out.map(b => b.id));
+      const extra = en.slice().reverse().filter(b => !have.has(b.id)).map(brief("en", enIdx));
+      // Le carte solo inglesi vanno al loro posto: le espansioni del catalogo sono in ordine di uscita (le più recenti prima).
+      const pos = Object.fromEntries(Object.keys(enIdx).map((id, i) => [id, i]));
+      out = [...out, ...extra].map((b, i) => ({ b, i, p: pos[b.setId] ?? -1 })).sort((x, y) => (y.p - x.p) || (x.i - y.i)).map(x => x.b);
+    } catch {}
+  }
+  return out;
 }
 
 // ================================================================ Interfaccia: utilità
@@ -1104,6 +1160,11 @@ async function renderBinder(banner) {
   const cards = (d.cards || []).map(c => ({ ...c, localId: String(c.localId) }));
   // Le carte che il catalogo non ha, ma tu sì.
   for (const k of customs) if (!cards.some(c => c.id === k.id)) cards.push({ id: k.id, localId: k.localId, name: k.name, image: "", custom: true, lang: k.lang });
+  // Catalogo italiano (o francese, tedesco…) incompleto: aggiungo le carte che ci sono solo in quello inglese (es. le promo del 30° Anniversario).
+  if (res.lang !== "en" && regionOf(res.lang) === "intl") {
+    try { const en = await fetchSet(view.setId, "en"); for (const c of en.data.cards || []) if (!cards.some(x => x.id === c.id)) cards.push({ ...c, localId: String(c.localId), lang: "en" }); } catch {}
+    if (ui.setView !== view || ui.tab !== "collection") return;
+  }
   cards.sort((a, b) => (parseInt(a.localId, 10) || 0) - (parseInt(b.localId, 10) || 0));
   const have = cards.filter(c => owned[c.id]).length;
   const visible = view.filter === "missing" ? cards.filter(c => !owned[c.id]) : view.filter === "owned" ? cards.filter(c => owned[c.id]) : cards;
@@ -1127,6 +1188,7 @@ async function renderBinder(banner) {
       ${Object.keys(myPhoto).length ? seg("binder-img", [["cat", "Immagini del catalogo"], ["mine", "Le mie foto", Object.keys(myPhoto).length]], view.img || "cat") : ""}
       <button class="btn gold" data-action="scan-this-set" data-set="${esc(d.id)}" data-name="${esc(d.name)}" data-ed="${esc(ed)}">Scansiona carte di questa espansione</button>
     </section>
+    ${view.filter === "missing" && cards.length > have ? `<p class="note">Tocca una carta mancante e poi «Compra su Federicstore» o «Vedi le offerte su Cardmarket».</p>` : ""}
     <div class="binder">${pages || `<p class="note">Nessuna carta in questo filtro.</p>`}</div>`;
 }
 async function renderBrowse(banner) {
@@ -1192,6 +1254,7 @@ function loadWorker(lang = "eng") {
 }
 const loadOCR = () => loadWorker("eng");
 const DIGITS = { tessedit_char_whitelist: "0123456789/", tessedit_pageseg_mode: "11" };
+const PROMO_CHARS = { tessedit_char_whitelist: "ABCDEFGHIJKLMNOPRSTVWXY0123456789/-", tessedit_pageseg_mode: "11" };
 const LINE = { tessedit_char_whitelist: "", tessedit_pageseg_mode: "7" };
 const BLOCK = { tessedit_char_whitelist: "", tessedit_pageseg_mode: "3" };
 async function ocr(worker, canvas, params) {
@@ -1395,13 +1458,25 @@ async function readNumber(worker, src, r, pass, totals, sides = [0, 1]) {
   }
   return out;
 }
+// Carte promo: nella stessa fascia c'è «MEP IT 101» (o «101/M-P»): leggo anche le lettere.
+async function readPromo(worker, src, r, pass, sides = [0, 1]) {
+  const out = [];
+  for (const side of sides) {
+    const c = band(src, r, SIDES[side][0], SIDES[side][1], 0.86, 0.985, 1400);
+    if (!c) continue;
+    const p = parsePromo((await ocr(worker, pass(c), PROMO_CHARS)).text);
+    if (p && !out.some(o => o.promo === p.promo && o.n === parseInt(p.number, 10))) out.push({ n: parseInt(p.number, 10), t: 0, promo: p.promo, region: p.region, ed: p.ed, pri: 2, side });
+  }
+  return out;
+}
+const candKey = c => c.promo ? `${c.promo}#${c.n}` : c.n + "/" + c.t;
 // Due letture uguali in pochi istanti confermano il numero; poi lo ignoro finché la carta resta inquadrata.
 function vote(cands) {
   const now = Date.now();
   for (const [k, e] of scan.votes) if (now - e.last > 2500) scan.votes.delete(k);
   let best = null;
   for (const c of cands.slice(0, 3)) {
-    const k = c.n + "/" + c.t;
+    const k = candKey(c);
     if (scan.cooldown.get(k) > now) { scan.cooldown.set(k, now + 2500); return null; }
     const e = scan.votes.get(k) || { c, count: 0, last: 0 };
     e.count++; e.last = now; e.c = c; scan.votes.set(k, e);
@@ -1409,11 +1484,11 @@ function vote(cands) {
   }
   if (!best) {
     const top = [...scan.votes.values()].sort((a, b) => b.count - a.count)[0];
-    if (top) setScanStatus(`Letto ${cardNumber(String(top.c.n), top.c.t)}…`, "reading");
+    if (top) setScanStatus(`Letto ${candLabel(top.c)}…`, "reading");
     return null;
   }
   scan.votes.clear();
-  scan.cooldown.set(best.c.n + "/" + best.c.t, now + 3000);
+  scan.cooldown.set(candKey(best.c), now + 3000);
   if (best.c.side != null) scan.side = best.c.side;
   return best.c;
 }
@@ -1552,7 +1627,8 @@ async function loop() {
         scan.sig = sig;
         // Un lato per fotogramma: quello dell'ultima carta riconosciuta due volte su tre, altrimenti si alternano.
         const side = scan.side == null ? k % 2 : (k % 3 === 2 ? 1 - scan.side : scan.side);
-        const hit = vote(await readNumber(worker, v, r, NUM_PASSES[k % NUM_PASSES.length], totals, [side]));
+        const pass = NUM_PASSES[k % NUM_PASSES.length];
+        const hit = vote(k % 4 === 3 ? await readPromo(worker, v, r, pass, [0]) : await readNumber(worker, v, r, pass, totals, [side]));
         if (hit) { scan.handled = true; await recognize(cardImage(v, r), [hit]); }
         // Carta ferma da un po' ma numero illeggibile: scatto da solo e provo anche con il nome.
         else if (!scan.handled && scan.steady >= 8 && sigSpread(sig) > 22) { scan.handled = true; scan.votes.clear(); await captureFrom(v, [r]); }
@@ -1577,6 +1653,7 @@ async function captureFrom(src, rects, whole) {
   let cands = [], used = tries[0];
   for (const [s, r] of tries) {
     for (const pass of NUM_PASSES) { cands = await readNumber(worker, s, r, pass, totals); if (cands.length) break; }
+    if (!cands.length) for (const pass of NUM_PASSES.slice(0, 2)) { cands = await readPromo(worker, s, r, pass); if (cands.length) break; }
     if (cands.length) { used = [s, r]; break; }
   }
   await recognize(still || snapshot(used[0], used[1]), cands);
@@ -1615,10 +1692,11 @@ async function guessVariant(card, still) {
 // ---------------------------------------------------------------- Dalla carta letta alla collezione
 async function recognize(still, cands) {
   const n0 = cands[0];
-  setScanStatus(n0 ? `Letto ${cardNumber(String(n0.n), n0.t)}: riconosco la carta…` : "Riconosco la carta…", "hit");
+  setScanStatus(n0 ? `Letto ${candLabel(n0)}: riconosco la carta…` : "Riconosco la carta…", "hit");
   let info;
   try { info = await analyzeCard(still); }
   catch { info = { lang: scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang, sure: false, family: null, name: "" }; }
+  if (n0?.ed && scan.lang === "auto" && LANG[n0.ed]) Object.assign(info, { lang: n0.ed, sure: true, family: regionOf(n0.ed) === "jp" ? "ja" : "west" });
   if (info.sure) scan.lastLang = info.lang;
   const photo = await photoBlob(still).catch(() => null);
   let langs = info.family === "zh" && scan.lang === "auto" ? [info.lang, info.lang === "zh-tw" ? "zh-cn" : "zh-tw"] : [info.lang];
@@ -1626,8 +1704,8 @@ async function recognize(still, cands) {
   let items = [], lang = info.lang, label = "";
   for (const [i, l] of langs.entries()) {
     for (const c of cands.slice(0, 3)) {
-      const res = await findByNumber({ number: String(c.n), total: c.t }, l);
-      if (res.items.length) { items = res.items; lang = res.lang; label = cardNumber(String(c.n), c.t); break; }
+      const res = await findByNumber(c.promo ? { number: String(c.n).padStart(3, "0"), total: null, promo: c.promo, region: c.region } : { number: String(c.n), total: c.t }, l);
+      if (res.items.length) { items = res.items; lang = res.lang; label = candLabel(c); break; }
     }
     if (items.length) {
       if (l !== info.lang) { const famOk = info.family === "zh" && i === 1; info.lang = l; if (!famOk) info.sure = false; }
@@ -1640,20 +1718,20 @@ async function recognize(still, cands) {
     const words = info.family === "west" ? info.name.split(/\s+/).filter(w => plain(w).length >= 4).sort((a, b) => b.length - a.length) : [info.name.replace(/\s+/g, "")];
     for (const w of words.slice(0, 2)) {
       try {
-        const list = await api(info.lang, "cards", { name: w.replace(/[^\p{L}\p{N}'-]/gu, "") });
-        if (list.length) { const idx = await setIndex(info.lang); items = list.slice(-24).reverse().map(b => ({ ...b, localId: String(b.localId), setId: setIdOf(b), setName: idx[setIdOf(b)]?.name || setIdOf(b), official: idx[setIdOf(b)]?.cardCount?.official || 0 })); lang = info.lang; label = `«${w}»`; break; }
+        const list = await searchByName(info.lang, w.replace(/[^\p{L}\p{N}'-]/gu, ""));
+        if (list.length) { items = list.slice(0, 24); lang = info.lang; label = `«${w}»`; break; }
       } catch {}
     }
   }
   // Carte fuori catalogo che hai già archiviato con lo stesso numero.
-  if (!items.length && cands.length) {
+  if (!items.length && cands.length && !n0.promo) {
     const known = customMatches(cands);
     if (known.length) { items = known; lang = known[0].lang; label = cardNumber(known[0].localId, known[0].official); }
   }
   if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   if (!items.length) {
     if (!n0 && plain(info.name).length < 3) { setScanStatus("Non riconosco la carta: avvicinala o scrivi il numero", ""); beep(false); return; }
-    openCustom({ name: info.family === "west" ? nameGuess(info.name) : "", number: n0 ? String(n0.n) : "", total: n0 ? n0.t : "", lang: info.lang }, { lang: info.lang, guess: !info.sure, photo, still });
+    openCustom({ name: info.family === "west" ? nameGuess(info.name) : "", number: n0 ? (n0.promo ? candLabel(n0) : String(n0.n)) : "", total: n0 && !n0.promo ? n0.t : "", lang: info.lang }, { lang: info.lang, guess: !info.sure, photo, still });
     return;
   }
   // Ordine: nome più somigliante, poi l'espansione appena scansionata.
@@ -1665,7 +1743,7 @@ async function recognize(still, cands) {
   const clear = scored.length === 1 ? (!nameRead || top.s >= 0.34)
     : (top.s >= 0.6 && (!second || top.s - second.s >= 0.2)) || (!nameRead && top.same && scored.filter(x => x.same).length === 1);
   const ctx = { lang: info.lang, guess: !info.sure, photo, still };
-  if (scan.auto && clear) { await addFromScan(top.b, lang, ctx); return; }
+  if (scan.auto && clear) { await addFromScan(top.b, top.b.catLang || lang, ctx); return; }
   scan.pending = { label, lang, items: scored.slice(0, 12).map(x => x.b), ctx };
   setScanStatus(`${scored.length > 1 ? scored.length + " carte possibili" : "Controlla la carta"} ${label}: tocca quella giusta`, "");
   beep(true);
@@ -1688,7 +1766,7 @@ function openCustom(custom, ctx) {
 }
 async function acceptNumber(p) {
   // Numero scritto a mano o lettura simulata: niente foto, lingua dell'ultima carta riconosciuta.
-  const lang = scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang;
+  const lang = p.ed && LANG[p.ed] && scan.lang === "auto" ? p.ed : scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang;
   setScanStatus(`Cerco ${numLabel(p)}…`, "hit");
   let res;
   try { res = await findByNumber(p, lang); } catch (e) { setScanStatus(e.message, ""); return; }
@@ -1696,7 +1774,7 @@ async function acceptNumber(p) {
   if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
   if (lastSet) items = [...items.filter(b => b.setId === lastSet), ...items.filter(b => b.setId !== lastSet)];
-  if (!items.length) { const known = customMatches([{ n: p.number, t: p.total }]); if (known.length) items = known; }
+  if (!items.length && !p.promo) { const known = customMatches([{ n: p.number, t: p.total }]); if (known.length) items = known; }
   if (!items.length) { openCustom({ name: "", number: String(p.number), total: p.total || "", lang }, { lang, guess: false, photo: null }); return; }
   const ctx = { lang, guess: scan.lang === "auto" && !scan.lastLang, photo: null };
   const sameSetFirst = lastSet && items[0].setId === lastSet && items.filter(b => b.setId === lastSet).length === 1;
@@ -1733,6 +1811,23 @@ async function addFromScan(brief, lang, ctx = {}) {
   }
 }
 
+// Elimina una copia (dalla scheda della carta, dal modulo o dalla scansione) con «Annulla» per qualche secondo.
+async function deleteCopy(id) {
+  const i = state.copies.findIndex(c => c.id === id); if (i < 0) return;
+  const cp = state.copies[i], si = scan.session.indexOf(cp);
+  const blob = cp.photo ? await Photos.get(id).catch(() => null) : null;
+  removeCopy(id);
+  if (sheet) { if (sheet.form?.id === id) sheet.form = null; drawSheet(); }
+  const card = cardOf(cp);
+  toast(`${card?.name || "Copia"} eliminata`, async () => {
+    state.copies.splice(Math.min(i, state.copies.length), 0, cp);
+    if (si >= 0) scan.session.splice(Math.min(si, scan.session.length), 0, cp);
+    if (blob) await Photos.put(id, blob);
+    recordSnapshot();
+    if (sheet) drawSheet();
+    if (ui.tab === "scan") renderScanPanels(); else render();
+  });
+}
 function removeCopy(id) {
   Photos.del(id);
   state.copies = state.copies.filter(c => c.id !== id);
@@ -2088,7 +2183,7 @@ function renderSearch(banner) {
     <form class="searchbar" id="search-form"><input id="q" type="search" placeholder="Nome della carta, es. Pikachu" value="${esc(s.q)}" aria-label="Nome della carta" enterkeyhint="search"><button class="btn primary" type="submit">Cerca</button></form>
     ${seg("search-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), s.lang, true)}
     ${s.msg ? `<p class="note">${esc(s.msg)}</p>` : ""}
-    <div class="grid-cards">${s.results.map(b => `<button class="pocket" data-action="open-card" data-id="${esc(b.id)}" data-lang="${esc(s.usedLang || s.lang)}" data-ed="${esc(s.usedLang || s.lang)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label num">${esc(b.id)}</span></button>`).join("")}</div>`;
+    <div class="grid-cards">${s.results.map(b => `<button class="pocket" data-action="open-card" data-id="${esc(b.id)}" data-lang="${esc(b.catLang || s.usedLang || s.lang)}" data-ed="${esc(s.usedLang || s.lang)}">${art(b)}<span class="label name-l">${esc(b.name)}</span><span class="label num">${esc(b.id)}</span></button>`).join("")}</div>`;
   $("#search-form").onsubmit = e => { e.preventDefault(); s.q = $("#q").value.trim(); doSearch(); };
 }
 async function doSearch() {
@@ -2096,15 +2191,27 @@ async function doSearch() {
   if (s.q.length < 2) { s.msg = "Scrivi almeno due lettere."; render(); return; }
   s.msg = "Cerco…"; render();
   try {
-    const list = await api(s.lang, "cards", { name: s.q });
-    s.results = list.slice().reverse().slice(0, 240).map(b => ({ ...b, localId: String(b.localId) }));
+    const list = await searchByName(s.lang, s.q);
+    s.results = list.slice(0, 240);
     s.usedLang = s.lang;
-    s.msg = s.results.length ? `${list.length} carte trovate${list.length > 240 ? ", le 240 più recenti" : ""}.` : `Nessuna carta trovata nell'edizione ${LANG[s.lang].short}.`;
+    const onlyEn = s.results.filter(b => b.catLang !== s.lang).length;
+    s.msg = s.results.length ? `${list.length} carte trovate${list.length > 240 ? ", le 240 più recenti" : ""}.${onlyEn ? ` ${onlyEn === 1 ? "Una non è ancora" : onlyEn + " non sono ancora"} nel catalogo ${LANG[s.lang].short}: ${onlyEn === 1 ? "compare" : "compaiono"} con il nome inglese.` : ""}` : `Nessuna carta trovata nell'edizione ${LANG[s.lang].short}.`;
   } catch (e) { s.results = []; s.msg = e.message; }
   render();
 }
 
 // ================================================================ Scheda carta
+// Federicstore (negozio italiano): ricerca della carta per comprarla o confrontarne il prezzo. Il valore della collezione resta Cardmarket.
+// I titoli dei prodotti hanno il numero come «088-128» e le promo come «MEP101»: si cerca così, che vale per ogni lingua del nome.
+function federicLink(c) {
+  const id = String(c.localId || ""), pad = x => String(x).padStart(3, "0");
+  let q;
+  if (PROMO_CODE[c.setId] && regionOf(c.lang) === "intl") q = /^\d+$/.test(id) ? PROMO_CODE[c.setId] + pad(id) : id;
+  else if (c.custom || CLASSIC_SETS.has(c.setId) || !/^\d+$/.test(id) || !c.official) q = (latinWords(c.name) || c.name) + (CLASSIC_SETS.has(c.setId) ? " Anniversario" : "");
+  else q = `${pad(id)}-${pad(c.official)}`;
+  return `https://federicstore.it/?s=${encodeURIComponent(q)}&post_type=product`;
+}
+const CLASSIC_SETS = new Set(Object.values(CLASSIC_OF).flat());
 let sheet = null;
 async function openCard(id, lang, ed) {
   sheet = { id, lang, ed: ed || lang, card: null, error: null, form: null };
@@ -2152,17 +2259,21 @@ function drawSheet() {
         ${c.cmId ? `<div class="row note" style="border-top:1px solid var(--line)">Collegata a Cardmarket: <b>${esc(c.cmName || "#" + c.cmId)}</b></div>` : ""}
         ${CM_DATA && !viewing && (c.custom || !priced || c.cmId) ? `<button class="row" data-action="cm-link" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">${c.cmId ? "Cambia il collegamento a Cardmarket" : "Collega a Cardmarket per avere il prezzo"} <span class="chev" style="margin-left:auto">›</span></button>` : ""}
         <a class="row" href="${cmLink}" target="_blank" rel="noopener" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">Vedi le offerte su Cardmarket <span class="chev" style="margin-left:auto">›</span></a>
+        <a class="row" href="${federicLink(c)}" target="_blank" rel="noopener" style="border-top:1px solid var(--line);color:var(--accent);font-weight:800">${mine.length ? "Confronta il prezzo su Federicstore" : "Compra su Federicstore"} <span class="chev" style="margin-left:auto">›</span></a>
       </section>
       ${sheet.cm ? cmPanel() : ""}
-      <p class="note">Fonte: ${c.cmId ? "listino Cardmarket" : "Cardmarket via TCGdex"}${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni.</p>
+      <p class="note">Fonte: ${c.cmId ? "listino Cardmarket" : "Cardmarket via TCGdex"}${c.cm.updated ? ", aggiornato il " + esc(itDate(c.cm.updated)) : ""}. Il trend mescola lingue e condizioni. Il valore della collezione usa sempre Cardmarket; Federicstore serve per comprare e confrontare.</p>
       <h3 class="section-title">Le tue copie <small>${mine.length}</small></h3>
-      ${mine.length ? `<section class="panel">${mine.map(cp => `<button class="row" data-action="edit-copy" data-copy="${esc(cp.id)}">${cp.photo ? `<img class="copy-photo" data-photo="${esc(cp.id)}" alt="La tua foto">` : ""}<div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
+      ${mine.length ? `<section class="panel">${mine.map(cp => `<div class="row copy-row"><button class="copy-open" data-action="edit-copy" data-copy="${esc(cp.id)}" aria-label="Modifica questa copia">${cp.photo ? `<img class="copy-photo" data-photo="${esc(cp.id)}" alt="La tua foto">` : ""}<div class="grow">${copyChips(cp, dups.has(cp.id))}${cp.location ? `<div class="sub" style="margin-top:4px">${esc(cp.location)}</div>` : ""}</div><span class="euro">${euro(copyValue(cp))}</span><span class="chev">›</span></button>${viewing ? "" : `<button class="btn small danger copy-del" data-action="remove-copy" data-copy="${esc(cp.id)}" aria-label="Elimina questa copia">✕</button>`}</div>`).join("")}</section>` : `<p class="note">Non hai ancora questa carta.</p>`}
       ${viewing ? "" : sheet.form ? copyForm(c) : quickAdd(c)}`;
   }
+  const keep = root.querySelector(".sheet")?.scrollTop || 0, sameCard = drawSheet.last === sheet.id;
+  drawSheet.last = sheet.id;
   root.innerHTML = `<div class="sheet-wrap" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(c?.name || "Carta")}">
     <div class="grab"></div>
     <div class="sheet-head"><h2>${esc(c?.name || "Carta")}</h2><button class="icon-btn" data-action="close-sheet-btn" aria-label="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     ${body}</div></div>`;
+  if (sameCard && keep) root.querySelector(".sheet").scrollTop = keep;
   if (sheet.form) bindForm(c);
   const cf = $("#cm-form");
   if (cf) cf.onsubmit = e => { e.preventDefault(); sheet.cm.q = $("#cm-q").value.trim(); runCmSearch(); };
@@ -2230,7 +2341,7 @@ function copyForm(c) {
     <div class="field"><label for="f-location">Posizione</label><input id="f-location" placeholder="es. raccoglitore 2, pagina 5" value="${esc(f.location || "")}"></div>
     <div class="field"><label for="f-notes">Note</label><textarea id="f-notes" rows="2">${esc(f.notes || "")}</textarea></div>
     <p class="note">${price != null ? `Trend per questa variante: ${euro(price)} × coefficiente ${LANG[f.lang]?.short} ${coef(f.lang)}.` : "Nessun trend per questa variante: puoi inserire il tuo valore."}</p>
-    <div class="btn-row"><button class="btn primary" type="submit" id="f-save">${f.id ? "Salva" : "Aggiungi alla collezione"}</button>${f.id ? `<button class="btn ghost danger" type="button" data-action="delete-copy" data-copy="${esc(f.id)}">${f.confirmDelete ? "Tocca di nuovo per eliminare" : "Elimina copia"}</button>` : ""}</div>
+    <div class="btn-row"><button class="btn primary" type="submit" id="f-save">${f.id ? "Salva" : "Aggiungi alla collezione"}</button>${f.id ? `<button class="btn ghost danger" type="button" data-action="delete-copy" data-copy="${esc(f.id)}">Elimina copia</button>` : ""}</div>
   </form>`;
 }
 function readForm() {
@@ -2311,14 +2422,11 @@ document.addEventListener("click", async e => {
       drawSheet(); $("#copy-form")?.scrollIntoView({ behavior: "smooth", block: "start" }); break;
     }
     case "edit-copy": { const cp = state.copies.find(x => x.id === el.dataset.copy); sheet.form = { ...cp, grader: cp.grader || "PSA" }; drawSheet(); $("#copy-form")?.scrollIntoView({ block: "start" }); break; }
-    case "delete-copy":
-      if (!sheet.form.confirmDelete) { readForm(); sheet.form.confirmDelete = true; drawSheet(); break; }
-      Photos.del(el.dataset.copy); state.copies = state.copies.filter(cp => cp.id !== el.dataset.copy); scan.session = scan.session.filter(cp => cp.id !== el.dataset.copy);
-      recordSnapshot(); sheet.form = null; toast("Copia eliminata"); drawSheet(); break;
+    case "delete-copy": await deleteCopy(el.dataset.copy); break;
     case "shutter": if (scan.paused) { toast("Riprendi la lettura per scattare"); break; } scan.capture = true; setScanStatus("Scatto…", "hit"); break;
     case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta: leggo il numero", ""); break;
     case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Auto: ${scan.auto ? "sì" : "no"}`; break;
-    case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const { lang: l, ctx } = scan.pending; scan.pending = null; await addFromScan(b, l, ctx); break; }
+    case "pick": { const b = scan.pending?.items.find(x => x.id === el.dataset.id); if (!b) break; const { lang: l, ctx } = scan.pending; scan.pending = null; await addFromScan(b, b.catLang || l, ctx); break; }
     case "skip-pending": if (scan.pending?.preview) URL.revokeObjectURL(scan.pending.preview); scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
     case "cycle-variant": {
       const c = state.copies.find(x => x.id === el.dataset.copy), card = cardOf(c);
@@ -2327,7 +2435,7 @@ document.addEventListener("click", async e => {
       const inf = scan.info.get(c.id); if (inf) inf.vguess = false;
       recordSnapshot(); renderScanPanels(); break;
     }
-    case "remove-copy": removeCopy(el.dataset.copy); break;
+    case "remove-copy": await deleteCopy(el.dataset.copy); break;
     case "cm-link": { const c = sheet.card; sheet.cm = { q: latinWords(c.cmName ? c.cmName.replace(/\s*[[·].*$/, "") : c.name), results: null, msg: "" }; if (sheet.cm.q) runCmSearch(); else { drawSheet(); $(".cm-panel")?.scrollIntoView({ block: "start" }); } break; }
     case "cm-close": sheet.cm = null; drawSheet(); break;
     case "cm-pick": {

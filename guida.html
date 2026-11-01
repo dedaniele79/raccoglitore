@@ -86,7 +86,7 @@ a { color: var(--accent); }
 
 <div class="wrap">
   <header class="hero"><div class="hero-inner">
-    <div class="eyebrow">Guida all'uso · versione 1.6.1 · aggiornata il 31 ottobre 2026</div>
+    <div class="eyebrow">Guida all'uso · versione 1.7 · aggiornata il 1 novembre 2026</div>
     <h1>Raccoglitore TCG</h1>
     <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
     <a class="cta" href="./">Apri l'app</a>
@@ -168,6 +168,13 @@ a { color: var(--accent); }
     <p>Compare il riquadro <b>Quale carta…?</b> con le immagini, ordinate per somiglianza del nome: tocca quella giusta. Succede anche quando il nome letto non coincide con quello del catalogo, per evitare aggiunte sbagliate.</p>
     <h3>Carte che il catalogo non ha</h3>
     <p>Il catalogo TCGdex non contiene tutte le carte: mancano per esempio molte buste speciali cinesi e coreane (come i <i>Gem Pack</i> cinesi, con numeri tipo <span class="num">1807/07</span>). In questi casi compare il riquadro <b>Non è nel catalogo: aggiungila lo stesso</b>, con la foto appena scattata: controlla nome, numero, edizione ed espansione e tocca <span class="k">Aggiungi con la foto</span>. La carta entra nella collezione e nel raccoglitore della sua espansione. La volta dopo che scansioni la stessa carta, l'app la riconosce tra le tue.</p>
+    <h3>Carte promo (anche quelle del 30° Anniversario)</h3>
+    <p>Le promo non hanno il totale: in basso a sinistra c'è un codice come <span class="num">MEP IT 101</span> (o <span class="num">SVP IT 085</span> per quelle di Scarlatto e Violetto; sulle giapponesi <span class="num">101/M-P</span>). L'app legge anche questo codice, e dalla sigla <i>IT</i> capisce l'edizione. Le promo del 30° Anniversario (per esempio Nidorina, Pikachu, Articuno, Zapdos, Moltres, Lucario, Sylveon-ex, Greninja-ex) sono le <b>MEP</b> da 093 a 110.</p>
+    <ul class="points">
+      <li>A mano scrivi il codice così come lo vedi: <span class="num">MEP 101</span>, <span class="num">MEP IT 101</span> o <span class="num">MEP101</span>.</li>
+      <li>Il catalogo italiano TCGdex non ha ancora tutte le promo recenti: l'app le prende da quello inglese, con il nome in inglese, e le archivia nella <b>tua edizione</b> (IT). Il prezzo Cardmarket è lo stesso.</li>
+      <li>Le carte della <b>Collezione classica</b> del 30° Anniversario hanno numeri oltre il totale (per esempio <span class="num">166/128</span>): l'app ti fa scegliere tra le carte classiche, oppure la riconosce dal nome.</li>
+    </ul>
     <h3>Il prezzo da Cardmarket</h3>
     <p>Per le carte fuori catalogo (e per quelle senza prezzo) apri la scheda della carta e tocca <span class="k">Collega a Cardmarket per avere il prezzo</span>. Scrivi il nome come su Cardmarket, in inglese (per esempio <i>Sawsbuck</i>): l'app mostra i prodotti Cardmarket con il prezzo di oggi, mettendo per prima l'espansione con lo stesso codice della tua carta (per esempio <i>CBB4C: Gem Pack Vol. 4</i>). Scegli quello giusto: da quel momento il prezzo si aggiorna ogni giorno. Se la stessa carta compare più volte (per esempio <i>versione 7 di 7</i>), Cardmarket ne vende più versioni: scegli quella con il prezzo che vedi sul sito per la tua carta; di solito la rara è quella che costa di più. Il tasto <span class="k">Vedi le offerte su Cardmarket</span> apre la ricerca sul sito.</p>
     <p class="note">Il listino arriva da Cardmarket ogni notte: è lo stesso listino pubblico che Cardmarket mette a disposizione, scaricato in automatico sul tuo GitHub perché l'app possa leggerlo.</p>
@@ -177,11 +184,11 @@ a { color: var(--accent); }
     <h3>Correggere</h3>
     <ul class="points">
       <li>Dopo ogni aggiunta compare <span class="k">Annulla</span> per qualche secondo.</li>
-      <li>Nella lista della sessione tocca la <b>variante</b> per cambiarla (Normale → Reverse → Holo), la <b>sigla dell'edizione</b> per cambiare lingua, <span class="k">✕</span> per togliere la carta.</li>
+      <li>Nella lista della sessione tocca la <b>variante</b> per cambiarla (Normale → Reverse → Holo), la <b>sigla dell'edizione</b> per cambiare lingua, <span class="k">✕</span> per togliere la carta (con <span class="k">Annulla</span> se hai sbagliato).</li>
       <li><span class="k">Pausa</span> ferma la lettura; <span class="k">Auto: no</span> ti fa confermare ogni carta.</li>
     </ul>
     <h3>Senza fotocamera</h3>
-    <p>Scrivi il numero nel campo <i>Oppure scrivi il numero</i> (per esempio <span class="num">25/165</span>; vanno bene anche <span class="num">25 165</span> o <span class="num">25.165</span>) e tocca <span class="k">Aggiungi</span>.</p>
+    <p>Scrivi il numero nel campo <i>Numero</i> (per esempio <span class="num">25/165</span>; vanno bene anche <span class="num">25 165</span> o <span class="num">25.165</span>; per le promo <span class="num">MEP 101</span>) e tocca <span class="k">Aggiungi</span>.</p>
     <div class="tip"><b>Alla fine della sessione</b>Tocca <span class="k">Salva la copia di sicurezza</span> sotto la lista: le carte e le foto finiscono su iCloud o OneDrive.</div>
   </section>
 
@@ -196,7 +203,7 @@ a { color: var(--accent); }
       <li><span class="k">Tutte le espansioni</span> mostra l'intero catalogo per edizione e serie, anche le espansioni dove non hai ancora carte.</li>
     </ul>
     <h3>Il raccoglitore</h3>
-    <p>Toccando un'espansione si apre il raccoglitore: pagine da 9 tasche, come quelli veri. Le carte possedute hanno il bordo oro e il numero di copie; le mancanti sono grigie. Con <b>Mancanti</b> vedi la lista di quello che ti manca. Con <b>Le mie foto</b> le tasche mostrano le foto delle tue carte invece delle immagini del catalogo.</p>
+    <p>Toccando un'espansione si apre il raccoglitore: pagine da 9 tasche, come quelli veri. Le carte possedute hanno il bordo oro e il numero di copie; le mancanti sono grigie. Con <b>Mancanti</b> vedi la lista di quello che ti manca: tocca una carta e poi <span class="k">Compra su Federicstore</span> o <span class="k">Vedi le offerte su Cardmarket</span>. Con <b>Le mie foto</b> le tasche mostrano le foto delle tue carte invece delle immagini del catalogo.</p>
   </section>
 
   <section class="chap" id="carta">
@@ -205,10 +212,12 @@ a { color: var(--accent); }
     <ul class="points">
       <li><span class="k">+1 Normale</span>, <span class="k">+1 Reverse</span>, <span class="k">+1 Holo</span> aggiungono una copia con un tocco, con l'edizione e la condizione predefinite.</li>
       <li><span class="k">Altre opzioni</span> apre il modulo completo: edizione, variante, condizione, carta gradata (ente, voto, certificato), prezzo pagato, valore tuo, posizione nel raccoglitore, note.</li>
-      <li>Tocca una delle <b>tue copie</b> per modificarla o eliminarla (l'eliminazione chiede una seconda conferma). Accanto a ogni copia c'è la sua foto.</li>
+      <li>Tocca una delle <b>tue copie</b> per modificarla. Per eliminarla tocca la <span class="k">✕</span> rossa accanto (oppure <span class="k">Elimina copia</span> nel modulo): sparisce subito e per qualche secondo compare <span class="k">Annulla</span> per rimetterla, con la sua foto. Accanto a ogni copia c'è la sua foto.</li>
       <li>Nel modulo della copia, <span class="k">Aggiungi foto</span> o <span class="k">Cambia foto</span> scatta o sceglie una foto; <span class="k">Togli</span> la elimina.</li>
       <li><span class="k">Vedi le offerte su Cardmarket</span> apre la ricerca della carta su Cardmarket.</li>
+      <li><span class="k">Compra su Federicstore</span> (se non hai la carta) o <span class="k">Confronta il prezzo su Federicstore</span> (se ce l'hai) apre il negozio Federicstore cercando la carta per numero (per esempio <span class="num">088-128</span>, o <span class="num">MEP101</span> per le promo). Lì trovi anche lingua, condizione e disponibilità.</li>
     </ul>
+    <p class="note">Il <b>valore della collezione</b> si calcola sempre con il trend Cardmarket. Federicstore serve per comprare le carte che mancano e per confrontare il prezzo di un negozio italiano: l'app non legge i suoi prezzi.</p>
   </section>
 
   <section class="chap" id="valore">
@@ -234,7 +243,7 @@ a { color: var(--accent); }
 
   <section class="chap" id="cerca">
     <h2><span class="n">8</span>Cercare nel catalogo</h2>
-    <p>La scheda <b>Cerca</b> trova qualsiasi carta del catalogo per nome, nell'edizione scelta. Il nome va scritto nella lingua dell'edizione (per esempio “Pikachu” va bene in tutte, “Dracaufeu” solo in francese).</p>
+    <p>La scheda <b>Cerca</b> trova qualsiasi carta del catalogo per nome, nell'edizione scelta. Il nome va scritto nella lingua dell'edizione (per esempio “Pikachu” va bene in tutte, “Dracaufeu” solo in francese). In italiano compaiono anche le carte che il catalogo italiano non ha ancora (come alcune promo recenti), con il nome inglese.</p>
   </section>
 
   <section class="chap" id="backup">
@@ -313,6 +322,7 @@ a { color: var(--accent); }
     <div class="tablebox"><table class="news">
       <thead><tr><th>Versione</th><th>Data</th><th>Cosa cambia</th></tr></thead>
       <tbody>
+        <tr><td>1.7</td><td>01/11/2026</td><td>Carte promo: l'app legge il codice MEP/SVP (es. MEP IT 101) e trova le promo del 30° Anniversario anche se il catalogo italiano non le ha ancora. Collezione classica del 30° Anniversario. Ricerca e raccoglitore completati con le carte che mancano nel catalogo italiano. Link a Federicstore per comprare e confrontare i prezzi (il valore resta Cardmarket). Eliminare una copia dalla scheda della carta con la ✕ e Annulla.</td></tr>
         <tr><td>1.6.1</td><td>31/10/2026</td><td>Grafica sistemata sui telefoni più stretti: niente più scritte sovrapposte o tagliate (titoli delle serie, pagina che scorreva di lato, pulsanti della fotocamera sopra la cornice, filtri e campi della scansione). I pulsanti di scelta vanno a capo; le righe delle lingue scorrono di lato con una sfumatura.</td></tr>
         <tr><td>1.6</td><td>31/10/2026</td><td>Cardmarket diretto: ogni notte l'app riceve il listino pubblico di Cardmarket. Le carte fuori catalogo (e quelle senza prezzo) si collegano al prodotto Cardmarket e hanno il prezzo aggiornato ogni giorno.</td></tr>
         <tr><td>1.5</td><td>31/10/2026</td><td>Collezioni di famiglia: condividi la tua collezione con un file e guarda quella dei familiari (con foto, valore, doppioni). Carte fuori catalogo: si aggiungono lo stesso con foto, nome, numero ed espansione. Variante riconosciuta in automatico (Auto). Foto ritagliate sui bordi della carta e raddrizzate. Numeri a quattro cifre (es. 1807/07 dei Gem Pack cinesi) e numero a mano con la tastiera completa.</td></tr>
