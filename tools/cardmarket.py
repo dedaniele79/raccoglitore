@@ -11,7 +11,7 @@ Uscita (cartella indicata come argomento):
                       dai prodotti sigillati della stessa espansione (buste, box).
   cm/esempio.json     alcune righe originali, per controllo
 """
-import json, os, re, sys, time, urllib.request
+import json, os, re, sys, time, urllib.error, urllib.request
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -19,10 +19,22 @@ BASE = "https://downloads.s3.cardmarket.com/productCatalog"
 GAME = 6  # Pokémon
 
 
-def get(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "raccoglitore-tcg/1.0 (uso personale)"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.load(r)
+def get(url, tries=1):
+    # TCGdex a volte risponde 503 ai server: riprovo con una pausa e un User-Agent da browser.
+    ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15 raccoglitore-tcg/1.0"
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": ua, "Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as ex:
+            if ex.code not in (429, 500, 502, 503, 504) or i == tries - 1:
+                raise
+            time.sleep(3 * (i + 1))
+
+
+# Nomi noti, se TCGdex non risponde: espansioni Cardmarket delle promo (idExpansion stabile).
+NOMI_NOTI = {6232: "MEP Black Star Promos"}
 
 
 def tcgdex_names(exp_of, budget=300):
@@ -30,7 +42,7 @@ def tcgdex_names(exp_of, budget=300):
     Così le promo (es. «MEP Black Star Promos») non prendono il nome di una scatola che le contiene."""
     t0, votes = time.time(), defaultdict(Counter)
     try:
-        sets = get("https://api.tcgdex.net/v2/en/sets")
+        sets = get("https://api.tcgdex.net/v2/en/sets", tries=4)
     except Exception as ex:
         print("TCGdex non disponibile:", ex)
         return {}
@@ -39,13 +51,13 @@ def tcgdex_names(exp_of, budget=300):
         if time.time() - t0 > budget:
             return []
         try:
-            cards = get(f"https://api.tcgdex.net/v2/en/sets/{urllib.request.quote(s['id'])}").get("cards") or []
+            cards = get(f"https://api.tcgdex.net/v2/en/sets/{urllib.request.quote(s['id'])}", tries=2).get("cards") or []
         except Exception:
             return []
         found = []
         for c in [cards[0], cards[len(cards) // 2]] if cards else []:
             try:
-                pid = ((get(f"https://api.tcgdex.net/v2/en/cards/{urllib.request.quote(c['id'])}").get("pricing") or {}).get("cardmarket") or {}).get("idProduct")
+                pid = ((get(f"https://api.tcgdex.net/v2/en/cards/{urllib.request.quote(c['id'])}", tries=2).get("pricing") or {}).get("cardmarket") or {}).get("idProduct")
             except Exception:
                 continue
             if pid in exp_of:
@@ -104,7 +116,7 @@ def main(out):
             first[p["idExpansion"]] = d
     exp_of = {p.get("idProduct"): p.get("idExpansion") for p in plist}
     official = tcgdex_names(exp_of)
-    exps = {e: [official.get(e) or names.get(e, ""), first.get(e, "")] for e in {p.get("idExpansion") for p in plist}}
+    exps = {e: [official.get(e) or NOMI_NOTI.get(e) or names.get(e, ""), first.get(e, "")] for e in {p.get("idExpansion") for p in plist}}
     json.dump(exps, open(f"{out}/cm/espansioni.json", "w"), ensure_ascii=False, separators=(",", ":"))
     sample = {"chiavi_prodotti": list(products.keys()), "primi": plist[:15],
               "sawsbuck": [p for p in plist if "sawsbuck" in p.get("name", "").lower()][:40],
