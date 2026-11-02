@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8UtzwlHlH/kLRz2BGdeFtRn4MivqhIbPr0Rv/9iWYXc=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-pJ36gctCJIfwlonXm7IYfLTzlpKLp92jHkaUF7D+UfY=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -828,9 +828,18 @@ async function loadCard(id, lang, force) {
     data = await api(used, `cards/${encodeURIComponent(id)}`);
   }
   const card = cardFromApi(data, used);
+  await withImage(card);
   state.cards[card.key] = card;
   ensureSet(card.setId, used).catch(() => {});
   Store.save();
+  return card;
+}
+
+// Immagine mancante nel catalogo della lingua (es. carte italiane vecchie, alcune promo): uso quella inglese della stessa carta,
+// che ha la stessa illustrazione. Se non c'è nemmeno lì, nelle schede e nel raccoglitore compare la tua foto.
+async function withImage(card) {
+  if (card.image || card.custom || regionOf(card.lang) !== "intl" || card.lang === "en") return card;
+  try { const en = await api("en", `cards/${encodeURIComponent(card.id)}`); if (en?.image) { card.image = en.image; card.imageLang = "en"; } } catch {}
   return card;
 }
 
@@ -881,6 +890,7 @@ async function refreshPrices(onProgress) {
       try {
         memo.delete(`${API}/${c.lang}/cards/${encodeURIComponent(c.id)}`);
         const fresh = cardFromApi(await api(c.lang, `cards/${encodeURIComponent(c.id)}`), c.lang);
+        if (!c.image) { await withImage(fresh); if (fresh.image) { c.image = fresh.image; c.imageLang = fresh.imageLang; } }
         c.cm = fresh.cm; c.fetched = Date.now(); ok++;
       } catch { ko++; }
     }));
@@ -993,7 +1003,8 @@ async function searchByName(lang, name) {
   if (regionOf(lang) === "intl" && lang !== "en") {
     try {
       const [en, enIdx] = await Promise.all([api("en", "cards", { name }), setIndex("en")]);
-      const have = new Set(out.map(b => b.id));
+      const have = new Set(out.map(b => b.id)), enImg = Object.fromEntries(en.filter(b => b.image).map(b => [b.id, b.image]));
+      for (const b of out) if (!b.image && enImg[b.id]) b.image = enImg[b.id];
       const extra = en.slice().reverse().filter(b => !have.has(b.id)).map(brief("en", enIdx)).filter(b => !isPocket(b.setId));
       // Le carte solo inglesi vanno al loro posto: le espansioni del catalogo sono in ordine di uscita (le più recenti prima).
       const pos = Object.fromEntries(Object.keys(enIdx).map((id, i) => [id, i]));
@@ -1008,7 +1019,11 @@ const ui = { tab: "collection", setView: null, browse: null, edFilter: "all", so
 const $ = s => document.querySelector(s);
 const main = $("#main");
 // Immagine della carta non disponibile: resta il retro con nome e numero (senza gestori inline, così la protezione CSP è completa).
-document.addEventListener("error", e => { if (e.target instanceof HTMLImageElement && e.target.closest(".art")) e.target.remove(); }, true);
+document.addEventListener("error", e => {
+  const img = e.target; if (!(img instanceof HTMLImageElement) || !img.closest(".art")) return;
+  const fb = img.dataset.fb; if (fb && img.src !== fb) { img.removeAttribute("data-fb"); img.src = fb; return; }
+  img.remove();
+}, true);
 
 function toast(text, undo) {
   const root = $("#toast-root");
@@ -1019,7 +1034,11 @@ function toast(text, undo) {
 }
 function art(card, high) {
   const back = `<div class="back"><div><b>${esc(card?.name || "")}</b><span>${esc(card?.localId || "")}</span></div></div>`;
-  if (card?.image && online) return `<div class="art">${back}<img loading="lazy" alt="${esc(card.name)}" src="${esc(imgUrl(card.image, high))}"></div>`;
+  if (card?.image && online) {
+    // Se l'immagine della lingua non esiste davvero, il gestore degli errori passa a quella inglese.
+    const fb = /^https:\/\/assets\.tcgdex\.net\/(it|fr|de|es|pt)\//.test(card.image) ? imgUrl(card.image.replace(/^(https:\/\/assets\.tcgdex\.net\/)(it|fr|de|es|pt)\//, "$1en/"), high) : "";
+    return `<div class="art">${back}<img loading="lazy" alt="${esc(card.name)}" src="${esc(imgUrl(card.image, high))}"${fb ? ` data-fb="${esc(fb)}"` : ""}></div>`;
+  }
   return `<div class="art">${back}</div>`;
 }
 const isFoil = card => !!card?.rarity && !/^(common|uncommon|comune|non comune|c|u)$/i.test(card.rarity);
@@ -1205,7 +1224,11 @@ async function renderBinder(banner) {
   for (const k of customs) if (!cards.some(c => c.id === k.id)) cards.push({ id: k.id, localId: k.localId, name: k.name, image: "", custom: true, lang: k.lang });
   // Catalogo italiano (o francese, tedesco…) incompleto: aggiungo le carte che ci sono solo in quello inglese (es. le promo del 30° Anniversario).
   if (res.lang !== "en" && regionOf(res.lang) === "intl") {
-    try { const en = await fetchSet(view.setId, "en"); for (const c of en.data.cards || []) if (!cards.some(x => x.id === c.id)) cards.push({ ...c, localId: String(c.localId), lang: "en" }); } catch {}
+    try {
+      const en = await fetchSet(view.setId, "en"), enImg = Object.fromEntries((en.data.cards || []).filter(c => c.image).map(c => [c.id, c.image]));
+      for (const c of cards) if (!c.image && enImg[c.id]) c.image = enImg[c.id];
+      for (const c of en.data.cards || []) if (!cards.some(x => x.id === c.id)) cards.push({ ...c, localId: String(c.localId), lang: "en" });
+    } catch {}
     if (ui.setView !== view || ui.tab !== "collection") return;
   }
   cards.sort((a, b) => (parseInt(a.localId, 10) || 0) - (parseInt(b.localId, 10) || 0));
@@ -1218,7 +1241,7 @@ async function renderBinder(banner) {
     const slice = visible.slice(i, i + 9);
     pages += `<div class="page"><div class="page-label"><span>Pagina ${i / 9 + 1}</span><span class="num">${esc(cardNumber(slice[0].localId, official).split("/")[0])}–${esc(cardNumber(slice[slice.length - 1].localId, official).split("/")[0])}</span></div>${slice.map(c => `
       <button class="pocket ${owned[c.id] ? "owned" : "missing"}" data-action="open-card" data-id="${esc(c.id)}" data-lang="${esc(c.lang || res.lang)}" data-ed="${esc(ed)}" aria-label="${esc(c.name)} ${esc(cardNumber(c.localId, official))}, ${owned[c.id] ? owned[c.id] + " possedute" : "mancante"}">
-        ${(mine || c.custom) && myPhoto[c.id] ? `<div class="art"><img class="photo" data-photo="${esc(myPhoto[c.id])}" alt="La tua foto"></div>` : art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
+        ${(mine || c.custom || !c.image) && myPhoto[c.id] ? `<div class="art"><img class="photo" data-photo="${esc(myPhoto[c.id])}" alt="La tua foto"></div>` : art(c)}${owned[c.id] ? `<span class="count">${owned[c.id]}</span>` : ""}
         <span class="label num">${esc(cardNumber(c.localId, official))}</span>
       </button>`).join("")}</div>`;
   }
@@ -1796,10 +1819,11 @@ async function recognize(still, cands) {
   }
   // Nessun numero utile: cerco per nome (solo se il nome letto è abbastanza lungo).
   if (!items.length && plain(info.name).length >= 4) {
-    const words = info.family === "west" ? info.name.split(/\s+/).filter(w => plain(w).length >= 4).sort((a, b) => b.length - a.length) : [info.name.replace(/\s+/g, "")];
-    for (const w of words.slice(0, 2)) {
+    // Prima il nome intero («Professor Oak»), poi le parole più lunghe.
+    const words = info.family === "west" ? [...new Set([usefulName(info.name), ...usefulName(info.name).split(/\s+/).filter(w => plain(w).length >= 4).sort((a, b) => b.length - a.length)])].filter(w => plain(w).length >= 4) : [info.name.replace(/\s+/g, "")];
+    for (const w of words.slice(0, 3)) {
       try {
-        const list = await searchByName(info.lang, w.replace(/[^\p{L}\p{N}'-]/gu, ""));
+        const list = await searchByName(info.lang, w.replace(/[^\p{L}\p{N}' -]/gu, "").trim());
         if (list.length) { items = list.slice(0, 24); lang = info.lang; label = `«${w}»`; break; }
       } catch {}
     }
