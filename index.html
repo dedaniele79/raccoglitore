@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-sowt0kPHBukRRdyMA8GTHTXUBUa5z0WNZT1iVbJyFrw=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-C0zeMPjmInk4Cv3q7DlL6FAgIR3UNKr3ZMwOygeNvqA=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -766,7 +766,7 @@ async function cmSearch(q, code, limit = 60, prices = true) {
 
 // Carte che TCGdex non ha ma Cardmarket sì (es. «Pokémon Trading Card Game Classic», 025/034): cerco il nome letto
 // nel listino Cardmarket. Prima le espansioni con tante carte quante il totale stampato, poi il nome più somigliante.
-const HEAD_WORDS = /^(trainer|supporter|supporto|aiuto|item|strumento|stadium|stadio|energy|energia|tool|allenatore|evolves|evolve|from|pokemon|pokémon|illus|holo)$/i;
+const HEAD_WORDS = /^(t?rainer|traine[er]?|trainee|supporter|supporto|aiuto|item|strumento|stadium|stadio|energy|energia|tool|allenatore|dresseur|entrenador|treinador|evolves|evolve|from|pokemon|pokémon|illus|holo)$/i;
 async function cmCandidates(nameText, total) {
   if (!CM_DATA) return [];
   const words = (String(nameText).match(/[A-Za-zÀ-ÿ'.-]{3,}/g) || []).filter(w => !HEAD_WORDS.test(w) && !STAGE_WORDS.test(w));
@@ -1811,8 +1811,15 @@ async function recognize(still, cands) {
   }
   if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
   // Il catalogo non ha la carta, o ha solo carte con un altro nome: cerco il nome letto su Cardmarket.
-  const nameOk = info.family === "west" && plain(info.name).length >= 4;
-  if (nameOk && (!items.length || Math.max(...items.map(b => nameScore(info.name, b.name))) < 0.5)) {
+  const nameOk = info.family === "west" && plain(usefulName(info.name)).length >= 4;
+  const bestScore = () => items.length ? Math.max(...items.map(b => nameScore(info.name, b.name))) : 0;
+  // Prima però il numero potrebbe essere letto male: cerco il nome nel catalogo, tra le espansioni con lo stesso totale.
+  if (nameOk && items.length && bestScore() < 0.5 && n0 && !n0.promo) {
+    const w = usefulName(info.name).split(" ").sort((a, b) => b.length - a.length)[0];
+    const near = (await searchByName(info.lang, w).catch(() => [])).filter(b => b.official === n0.t && nameScore(info.name, b.name) >= 0.8 && !items.some(x => x.id === b.id));
+    if (near.length) items = [...near, ...items];
+  }
+  if (nameOk && (!items.length || bestScore() < 0.5)) {
     setScanStatus("Cerco la carta su Cardmarket…", "hit");
     let extra = await cmCandidates(info.name, n0 && !n0.promo ? n0.t : 0).catch(() => []);
     // Nome debole: vale solo se su Cardmarket c'è una carta con quel nome in un'espansione grande quanto il totale stampato.
