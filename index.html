@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-C0zeMPjmInk4Cv3q7DlL6FAgIR3UNKr3ZMwOygeNvqA=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-8UtzwlHlH/kLRz2BGdeFtRn4MivqhIbPr0Rv/9iWYXc=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1583,7 +1583,7 @@ async function analyzeCard(still) {
   const eng = await loadOCR();
   const out = { lang: fixed, sure: !!fixed, family: fixed ? ({ jp: "ja", kr: "ko", cn: "zh" }[regionOf(fixed)] || "west") : null, name: "" };
   const nb = band(still, R, 0.05, 0.8, 0.025, 0.11, 1300);
-  if (!fixed || out.family === "west") out.name = nb ? (await ocr(eng, nb, LINE)).text.trim() : "";
+  if (!fixed || out.family === "west") { const d = nb ? await ocr(eng, nb, LINE) : null; out.name = d ? d.text.trim() : ""; out.nameConf = d ? d.confidence : 0; }
   if (!fixed) {
     const body = band(still, R, 0, 1, 0.5, 0.985, 1000);
     const W = westernLanguage(body ? (await ocr(eng, body, BLOCK)).text : "");
@@ -1612,7 +1612,7 @@ async function analyzeCard(still) {
   if (out.family !== "west" && nb) out.name = (await ocr(await loadWorker(out.family === "ko" ? "kor" : "jpn"), nb, LINE)).text.trim();
   // Nome non letto (scritta chiara su fondo argentato, o carte con il layout classico dove il nome sta sotto «TRAINER»):
   // riprovo nelle due fasce in alto con la soglia locale. Il nome trovato così è «debole»: conta solo se esiste su Cardmarket.
-  if (out.family === "west" && usefulName(out.name).replace(/\s/g, "").length < 4) {
+  if (out.family === "west" && (usefulName(out.name).replace(/\s/g, "").length < 4 || (out.nameConf || 0) < 55)) {
     let best = null;
     for (const [y0, y1] of [[0.10, 0.27], [0.02, 0.12]]) {
       const b = band(still, R, 0.04, 0.96, y0, y1, 1300); if (!b) continue;
@@ -1626,7 +1626,7 @@ async function analyzeCard(still) {
       }
       if (best?.c >= 60) break;
     }
-    if (best) Object.assign(out, { name: best.t, nameWeak: true });
+    if (best && (usefulName(out.name).replace(/\s/g, "").length < 4 || best.c > (out.nameConf || 0) + 10)) Object.assign(out, { name: best.t, nameWeak: true });
   }
   return out;
 }
