@@ -1,4 +1,4 @@
-Tesseract.js 5.1.1, tesseract.js-core 5.1.1 e i dati delle lingue inglese, giapponese e coreana
-(@tesseract.js-data/eng, jpn, kor 1.0.0, modelli 4.0.0_best_int)
+Tesseract.js 5.1.1, tesseract.js-core 5.1.1 e i dati delle lingue inglese, giapponese, coreana e cinese
+(@tesseract.js-data/eng, jpn, kor, chi_sim, chi_tra 1.0.0, modelli 4.0.0_best_int)
 sono distribuiti con licenza Apache 2.0: https://github.com/naptha/tesseract.js
 I file sono copiati senza modifiche dai pacchetti npm ufficiali.
