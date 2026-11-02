@@ -1,5 +1,5 @@
 // Tiene l'app disponibile anche senza connessione. Il catalogo e i prezzi restano sempre online.
-const CACHE = "raccoglitore-v8";
+const CACHE = "raccoglitore-v9";
 const STATIC = "statici-ocr-5.1.1-cjk-font-1";   // lettore del numero e caratteri: non cambiano, si scaricano una volta sola
 const IMG = "carte-img";
 const IMG_MAX = 1500;                        // limite alle immagini salvate, per non riempire la memoria del telefono
