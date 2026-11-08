@@ -11,8 +11,9 @@ L'app (app.html, funzione fingerprint) usa esattamente gli stessi passi.
 
 Uscita (cartella indicata come argomento): impronte.json {versione, creato, carte: [[id, hash esadecimale, colore base64]]}
 Incrementale: riusa le impronte già calcolate (file precedente, se c'è) e calcola solo le carte nuove.
-Con --prova aggiunge una verifica: deforma 300 immagini come foto (prospettiva, sfocatura, luce, colore, JPEG)
-e misura quante volte la carta giusta è la prima trovata.
+Con --prova aggiunge una verifica: deforma 600 immagini come foto (prospettiva, sfocatura, luce, colore, JPEG)
+e misura, con la regola dell'app, quante carte si aggiungono giuste o sbagliate e quante carte estranee
+(tolte dal catalogo) verrebbero prese per un'altra. Salva anche 40 immagini in campioni/ per la prova dell'app.
 """
 import base64, io, json, math, os, random, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -25,7 +26,7 @@ REGION = (0.12, 0.88, 0.14, 0.44)  # x0, x1, y0, y1
 POCKET = lambda s: s in ("tcgp",) or (len(s) <= 4 and s[:1] in "AB" and s[1:2].isdigit()) or s in ("P-A", "P-B")
 
 
-def get(url, tries=3, raw=False):
+def get(url, tries=5, raw=False):
     for i in range(tries):
         try:
             req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "*/*"})
@@ -179,7 +180,7 @@ def main(out, prev=None):
         for i, (cid, h, col, im) in enumerate(ex.map(one, todo)):
             if h:
                 res[cid] = (h, col)
-                if PROVA and im is not None and len(samples) < 300 and random.random() < 0.05:
+                if PROVA and im is not None and len(samples) < 600 and random.random() < 0.06:
                     samples.append((cid, im))
             if i % 1000 == 0:
                 print(i, "su", len(todo), round(time.time() - t0), "s")
@@ -193,28 +194,60 @@ def main(out, prev=None):
               open(f"{out}/impronte.json", "w"), separators=(",", ":"))
     print("ok", len(carte), "impronte in", round(time.time() - t0), "s")
     if PROVA and samples:
-        prova(samples, carte)
+        prova(samples, carte, out)
 
 
-def prova(samples, carte):
+def scegli(near, T, G):
+    """Stessa regola dell'app (imageGuess): gruppo della stessa illustrazione, distacco dalla prima carta diversa."""
+    top = near[0]
+    group = [x for x in near if x is top or (x[0] <= top[0] + 3 and bin(x[3] ^ top[3]).count("1") <= 4)]
+    other = next((x for x in near if x not in group), None)
+    gap = other[0] - top[0] if other else 99
+    return group, top[0] <= T and gap >= G
+
+
+def cerca(hi, col, ints, escludi=()):
+    near = sorted((bin(hi ^ H).count("1"), id_, C, H) for id_, H, C in ints if id_ not in escludi and bin(hi ^ H).count("1") <= 24)[:60]
+    return sorted(((d + 0.15 * color_dist(col, C), id_, C, H) for d, id_, C, H in near))[:8]
+
+
+def prova(samples, carte, out):
     rnd = random.Random(7)
-    ok1 = ok5 = 0
-    marg = []
     ints = [(id_, int(H, 16), C) for id_, H, C in carte]
+    byid = {id_: H for id_, H, C in ints}
+    griglia = [(T, G) for T in (7, 9, 11, 13, 15) for G in (3, 5, 7, 9)]
+    acc = {k: [0, 0, 0] for k in griglia}  # accettate giuste, accettate sbagliate, estranee accettate
+    ok1 = ok5 = 0
     for cid, im in samples:
         h, col = fingerprint(distort(im, rnd))
         hi = int(h, 16)
-        near = sorted(((bin(hi ^ H).count("1"), id_, C) for id_, H, C in ints))[:60]
-        sc = sorted(((d + 0.15 * color_dist(col, C), id_) for d, id_, C in near))
-        ids = [x[1] for x in sc[:5]]
-        ok1 += ids[0] == cid
+        near = cerca(hi, col, ints)
+        ids = [x[1] for x in near[:5]]
+        ok1 += bool(ids) and ids[0] == cid
         ok5 += cid in ids
-        if ids[0] == cid:
-            marg.append(round(sc[1][0] - sc[0][0], 1))
+        # Carta che non è nel catalogo: tolgo lei e le sue ristampe con la stessa illustrazione.
+        twins = {i for i, H in byid.items() if bin(H ^ byid[cid]).count("1") <= 4}
+        far = cerca(hi, col, ints, twins)
+        for k in griglia:
+            if near:
+                g, strong = scegli(near, *k)
+                if strong:
+                    acc[k][0 if cid in [x[1] for x in g] else 1] += 1
+            if far and scegli(far, *k)[1]:
+                acc[k][2] += 1
     n = len(samples)
     print(f"PROVA: {n} foto simulate, carta giusta prima {ok1}/{n} ({100 * ok1 / n:.0f} %), tra le prime 5 {ok5}/{n} ({100 * ok5 / n:.0f} %)")
-    marg.sort()
-    print("PROVA: distacco dalla seconda (quando giusta), percentili 10/50/90:", marg[len(marg) // 10] if marg else None, marg[len(marg) // 2] if marg else None, marg[9 * len(marg) // 10] if marg else None)
+    print("PROVA: soglia punteggio / distacco -> aggiunte giuste, aggiunte sbagliate, carte estranee prese per altre")
+    for k in griglia:
+        a = acc[k]
+        print(f"PROVA  T={k[0]:>2} G={k[1]}: giuste {100 * a[0] / n:5.1f} %  sbagliate {100 * a[1] / n:4.1f} %  estranee {100 * a[2] / n:4.1f} %")
+    # Qualche immagine vera per la prova dell'app (stessa impronta in JavaScript).
+    os.makedirs(f"{out}/campioni", exist_ok=True)
+    keep = []
+    for cid, im in samples[:40]:
+        im.convert("RGB").save(f"{out}/campioni/{cid}.png")
+        keep.append(cid)
+    json.dump(keep, open(f"{out}/campioni/elenco.json", "w"))
 
 
 if __name__ == "__main__":

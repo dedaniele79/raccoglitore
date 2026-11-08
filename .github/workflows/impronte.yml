@@ -15,6 +15,9 @@ on:
     paths: [tools/impronte.py, .github/workflows/impronte.yml]
 permissions:
   contents: write
+concurrency:
+  group: impronte
+  cancel-in-progress: false
 jobs:
   impronte:
     runs-on: ubuntu-latest
@@ -31,7 +34,8 @@ jobs:
           TEMPO_MAX: "17000"
         run: |
           ARG=""
-          if [ ! -s precedenti.json ] || [ "${{ github.event.inputs.prova }}" = "true" ]; then ARG="--prova"; fi
+          # Prima volta, prova chiesta a mano o programma cambiato (le impronte vecchie potrebbero non valere più): ricalcolo tutto.
+          if [ ! -s precedenti.json ] || [ "${{ github.event.inputs.prova }}" = "true" ] || [ "${{ github.event_name }}" = "push" ]; then ARG="--prova"; fi
           python3 tools/impronte.py out precedenti.json $ARG
       - name: Pubblica sul ramo impronte
         run: |
