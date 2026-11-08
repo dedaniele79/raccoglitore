@@ -12,8 +12,8 @@ L'app (app.html, funzione fingerprint) usa esattamente gli stessi passi.
 Uscita (cartella indicata come argomento): impronte.json {versione, creato, carte: [[id, hash esadecimale, colore base64]]}
 Incrementale: riusa le impronte già calcolate (file precedente, se c'è) e calcola solo le carte nuove.
 Con --prova aggiunge una verifica: deforma 600 immagini come foto (prospettiva, sfocatura, luce, colore, JPEG)
-e misura, con la regola dell'app, quante carte si aggiungono giuste o sbagliate e quante carte estranee
-(tolte dal catalogo) verrebbero prese per un'altra. Salva anche 40 immagini in campioni/ per la prova dell'app.
+e misura, con la regola dell'app (due fotogrammi d'accordo), quante carte si aggiungono giuste o sbagliate e quante
+carte estranee (tolte dal catalogo con le ristampe) verrebbero prese per un'altra. Salva anche 40 immagini in campioni/ per la prova dell'app.
 """
 import base64, io, json, math, os, random, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
@@ -197,10 +197,13 @@ def main(out, prev=None):
         prova(samples, carte, out)
 
 
+STESSA = 8  # bit diversi entro cui due carte hanno la stessa illustrazione (ristampe, holo e non holo, Evoluzioni)
+
+
 def scegli(near, T, G):
     """Stessa regola dell'app (imageGuess): gruppo della stessa illustrazione, distacco dalla prima carta diversa."""
     top = near[0]
-    group = [x for x in near if x is top or (x[0] <= top[0] + 3 and bin(x[3] ^ top[3]).count("1") <= 4)]
+    group = [x for x in near if x is top or bin(x[3] ^ top[3]).count("1") <= STESSA]
     other = next((x for x in near if x not in group), None)
     gap = other[0] - top[0] if other else 99
     return group, top[0] <= T and gap >= G
@@ -212,39 +215,43 @@ def cerca(hi, col, ints, escludi=()):
 
 
 def prova(samples, carte, out):
+    """Come nell'app: la carta si aggiunge quando due fotogrammi di fila sono «sicuri» e indicano la stessa illustrazione."""
     rnd = random.Random(7)
     ints = [(id_, int(H, 16), C) for id_, H, C in carte]
     byid = {id_: H for id_, H, C in ints}
-    griglia = [(T, G) for T in (7, 9, 11, 13, 15) for G in (3, 5, 7, 9)]
-    acc = {k: [0, 0, 0] for k in griglia}  # accettate giuste, accettate sbagliate, estranee accettate
+    griglia = [(T, G) for T in (9, 11, 12, 13, 15) for G in (3, 4, 5, 7)]
+    acc = {k: [0, 0, 0, 0] for k in griglia}  # giuste (1 fotogramma), giuste (2), sbagliate (2), estranee (2)
     ok1 = ok5 = 0
     for cid, im in samples:
-        h, col = fingerprint(distort(im, rnd))
-        hi = int(h, 16)
-        near = cerca(hi, col, ints)
-        ids = [x[1] for x in near[:5]]
-        ok1 += bool(ids) and ids[0] == cid
+        twins = {i for i, H in byid.items() if bin(H ^ byid[cid]).count("1") <= STESSA}
+        frames = []
+        for _ in range(2):
+            h, col = fingerprint(distort(im, rnd))
+            hi = int(h, 16)
+            frames.append((cerca(hi, col, ints), cerca(hi, col, ints, twins)))
+        ids = [x[1] for x in frames[0][0][:5]]
+        ok1 += bool(ids) and ids[0] in twins
         ok5 += cid in ids
-        # Carta che non è nel catalogo: tolgo lei e le sue ristampe con la stessa illustrazione.
-        twins = {i for i, H in byid.items() if bin(H ^ byid[cid]).count("1") <= 4}
-        far = cerca(hi, col, ints, twins)
         for k in griglia:
-            if near:
-                g, strong = scegli(near, *k)
-                if strong:
-                    acc[k][0 if cid in [x[1] for x in g] else 1] += 1
-            if far and scegli(far, *k)[1]:
-                acc[k][2] += 1
+            res = [scegli(n, *k) if n else ([], False) for n, _ in frames]
+            far = [scegli(f, *k) if f else ([], False) for _, f in frames]
+            if res[0][1] and cid in [x[1] for x in res[0][0]]:
+                acc[k][0] += 1
+            both = res[0][1] and res[1][1] and {x[1] for x in res[0][0]} & {x[1] for x in res[1][0]}
+            if both:
+                acc[k][1 if cid in [x[1] for x in res[1][0]] else 2] += 1
+            if far[0][1] and far[1][1] and {x[1] for x in far[0][0]} & {x[1] for x in far[1][0]}:
+                acc[k][3] += 1
     n = len(samples)
-    print(f"PROVA: {n} foto simulate, carta giusta prima {ok1}/{n} ({100 * ok1 / n:.0f} %), tra le prime 5 {ok5}/{n} ({100 * ok5 / n:.0f} %)")
-    print("PROVA: soglia punteggio / distacco -> aggiunte giuste, aggiunte sbagliate, carte estranee prese per altre")
+    print(f"PROVA: {n} carte, 2 foto simulate ciascuna; illustrazione giusta prima {ok1}/{n} ({100 * ok1 / n:.0f} %), carta tra le prime 5 {ok5}/{n} ({100 * ok5 / n:.0f} %)")
+    print("PROVA: soglia punteggio T / distacco G -> riconosciute (1 fotogramma), aggiunte giuste e sbagliate (2 fotogrammi), carte estranee prese per altre")
     for k in griglia:
         a = acc[k]
-        print(f"PROVA  T={k[0]:>2} G={k[1]}: giuste {100 * a[0] / n:5.1f} %  sbagliate {100 * a[1] / n:4.1f} %  estranee {100 * a[2] / n:4.1f} %")
+        print(f"PROVA  T={k[0]:>2} G={k[1]}: 1 fotogr. {100 * a[0] / n:5.1f} %  giuste {100 * a[1] / n:5.1f} %  sbagliate {100 * a[2] / n:4.1f} %  estranee {100 * a[3] / n:4.1f} %")
     # Qualche immagine vera per la prova dell'app (stessa impronta in JavaScript).
     os.makedirs(f"{out}/campioni", exist_ok=True)
     keep = []
-    for cid, im in samples[:40]:
+    for cid, im in samples[::15][:40]:
         im.convert("RGB").save(f"{out}/campioni/{cid}.png")
         keep.append(cid)
     json.dump(keep, open(f"{out}/campioni/elenco.json", "w"))
