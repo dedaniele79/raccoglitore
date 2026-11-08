@@ -1,13 +1,14 @@
 // Tiene l'app disponibile anche senza connessione. Il catalogo e i prezzi restano sempre online.
-const CACHE = "raccoglitore-v10";
+const CACHE = "raccoglitore-v11";
 const STATIC = "statici-ocr-5.1.1-cjk-font-1";   // lettore del numero e caratteri: non cambiano, si scaricano una volta sola
 const IMG = "carte-img";
 const IMG_MAX = 1500;                        // limite alle immagini salvate, per non riempire la memoria del telefono
-const SHELL = ["./", "index.html", "guida.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "fonts/fonts.css"];
+const SHELL = ["./", "index.html", "guida.html", "manifest.webmanifest", "icon-180.png", "icon-192.png", "icon-512.png", "icon-maskable-192.png", "icon-maskable-512.png", "fonts/fonts.css"];
+const KEEP = [CACHE, STATIC, IMG, "raccoglitore-impronte"];   // impronte delle carte: le gestisce l'app (aggiornate ogni settimana)
 
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => ![CACHE, STATIC, IMG].includes(k)).map(k => caches.delete(k)))));
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => !KEEP.includes(k)).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 

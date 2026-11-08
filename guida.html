@@ -86,9 +86,9 @@ a { color: var(--accent); }
 
 <div class="wrap">
   <header class="hero"><div class="hero-inner">
-    <div class="eyebrow">Guida all'uso · versione 1.9 · aggiornata il 2 novembre 2026</div>
+    <div class="eyebrow">Guida all'uso · versione 2.0 · aggiornata l'8 novembre 2026</div>
     <h1>Raccoglitore TCG</h1>
-    <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
+    <p>L'app per archiviare la tua collezione di carte Pokémon: scansioni le carte con l'iPhone o con un telefono Android, le ritrovi ordinate per edizione, serie ed espansione e vedi quanto valgono su Cardmarket.</p>
     <a class="cta" href="./">Apri l'app</a>
   </div></header>
 
@@ -112,7 +112,7 @@ a { color: var(--accent); }
 
   <section class="chap" id="installazione">
     <h2><span class="n">1</span>Installazione</h2>
-    <p>Raccoglitore è una web app: si apre da Safari e si aggiunge alla schermata Home. Non passa dall'App Store, non scade e non va mai reinstallata.</p>
+    <p>Raccoglitore è una web app: si apre dal browser (Safari sull'iPhone, Chrome o Samsung Internet su Android) e si aggiunge alla schermata Home. Non passa dall'App Store né dal Play Store, non scade e non va mai reinstallata.</p>
     <h3>Mettere l'app online (una volta sola, dal computer)</h3>
     <ol class="steps">
       <li>Crea un account gratuito su <b>github.com</b>, se non ce l'hai.</li>
@@ -128,8 +128,21 @@ a { color: var(--accent); }
       <li>Tocca <span class="k">Condividi</span> (il quadrato con la freccia) › <span class="k">Aggiungi alla schermata Home</span> › <span class="k">Aggiungi</span>.</li>
       <li>Apri l'app dall'icona: si apre a tutto schermo. Al primo uso della scansione consenti l'accesso alla fotocamera.</li>
     </ol>
+    <h3>Aggiungerla a un telefono Android (per esempio Samsung Galaxy S24)</h3>
+    <ol class="steps">
+      <li>Apri l'indirizzo con <b>Chrome</b> (consigliato) o con <b>Samsung Internet</b>.</li>
+      <li>In Chrome compare in cima alla collezione il riquadro <b>Installa l'app sul telefono</b>: tocca <span class="k">Installa</span>. Se non c'è, tocca <span class="k">⋮</span> in alto a destra › <span class="k">Installa app</span> (o <span class="k">Aggiungi a schermata Home</span>).</li>
+      <li>In Samsung Internet tocca il menu <span class="k">≡</span> in basso › <span class="k">Aggiungi pagina a</span> › <span class="k">Schermata Home</span>.</li>
+      <li>Apri l'app dall'icona: si apre a tutto schermo, senza barra degli indirizzi. Al primo uso della scansione consenti l'accesso alla fotocamera.</li>
+    </ol>
+    <ul class="points">
+      <li><b>Scorciatoie</b>: tieni premuta l'icona dell'app e scegli <b>Scansiona</b> (si apre direttamente la fotocamera) o <b>Valore</b>.</li>
+      <li><b>Tasto Indietro</b> (o il gesto indietro dal bordo dello schermo): chiude la scheda o il pannello aperto e torna alla schermata precedente; dalla collezione esce dall'app.</li>
+      <li><b>Luce</b>: nella scansione, se il telefono ce l'ha, compare il pulsante con la torcia a destra della cornice. Usala solo al buio: sulle carte lucide crea riflessi.</li>
+      <li>La copia di sicurezza si salva su <b>Google Drive</b>, OneDrive o nella cartella Download; per condividere la collezione in famiglia va bene anche <b>Quick Share</b>.</li>
+    </ul>
     <h3>Aggiornare l'app</h3>
-    <p>Quando ricevi una nuova versione, carica i nuovi file su GitHub sopra i vecchi (<span class="k">Add file</span> › <span class="k">Upload files</span>). L'iPhone la scarica da solo alla prima apertura con la connessione; se non la vedi, chiudi l'app e riaprila. La collezione non si perde.</p>
+    <p>Quando ricevi una nuova versione, carica i nuovi file su GitHub sopra i vecchi (<span class="k">Add file</span> › <span class="k">Upload files</span>). Il telefono la scarica da solo alla prima apertura con la connessione; se non la vedi, chiudi l'app e riaprila. La collezione non si perde.</p>
   </section>
 
   <section class="chap" id="primo-avvio">
@@ -140,21 +153,30 @@ a { color: var(--accent); }
 
   <section class="chap" id="scansione">
     <h2><span class="n">3</span>Scansione veloce</h2>
-    <p>La scansione archivia molte carte di fila senza toccare lo schermo. L'app legge il numero stampato in basso (per esempio <span class="num">025/165</span>), riconosce la lingua della carta, controlla il nome, la aggiunge alla collezione e ne salva la foto.</p>
+    <p>La scansione archivia molte carte di fila senza toccare lo schermo. Come le app tipo PokéCardex, l'app <b>riconosce la carta dall'illustrazione</b>: di solito in meno di un secondo, senza dover leggere il testo. Se l'illustrazione non basta, legge il numero stampato in basso (per esempio <span class="num">025/165</span>), riconosce la lingua, controlla il nome. Poi aggiunge la carta alla collezione e ne salva la foto.</p>
     <h3>Prima di iniziare</h3>
     <ul class="points">
       <li><b>Variante</b>: con <b>Auto</b> la riconosce l'app. Se il catalogo ha una sola versione della carta (per esempio le ex e le illustrazioni speciali) è sicura; altrimenti l'app confronta quanto luccicano testo e illustrazione e, se non è certa, segna la carta con <b>variante da controllare</b>. Se hai già diviso le pile (normali, reverse, holo) puoi sceglierla tu: è più sicuro.</li>
       <li>Lavora con una luce uniforme, senza riflessi sulla parte bassa della carta. Va bene anche un tavolo scuro.</li>
-      <li>La prima volta serve la connessione: l'app scarica il lettore (circa 7 MB, e altri 4 MB alla prima carta asiatica).</li>
+      <li>La prima volta serve la connessione: l'app scarica le impronte delle illustrazioni (circa 1 MB) e il lettore del testo (circa 7 MB, e altri 4 MB alla prima carta asiatica).</li>
+      <li><b>Per la massima velocità scegli l'edizione</b> (per esempio <i>Italiano</i>) al posto di <i>Automatica</i>: così l'app non deve leggere il testo per capire la lingua.</li>
     </ul>
     <h3>Come si fa</h3>
     <ol class="steps">
       <li>Tocca il pulsante giallo <span class="k">Scansiona</span> al centro della barra in basso.</li>
       <li>Lascia <b>Edizione: Automatica</b> e <b>Variante: Auto</b>, scegli la <b>Condizione</b>.</li>
       <li>Tieni la carta dentro la cornice gialla, dritta e grande quanto la cornice, a 15–20 cm dal telefono.</li>
-      <li>Quando legge lo stesso numero due volte, l'app riconosce la carta: lingua dal testo (o dalla scrittura giapponese, coreana, cinese) e nome. Se è sicura, la aggiunge con la foto e la mostra in <b>Questa sessione</b>. La foto viene ritagliata sui bordi della carta e raddrizzata, senza lo sfondo.</li>
+      <li>Quando riconosce l'illustrazione in due fotogrammi di fila, l'app aggiunge la carta (il telefono vibra) e la mostra in <b>Questa sessione</b>. Se l'illustrazione non è abbastanza chiara, aspetta di leggere lo stesso numero due volte e riconosce lingua e nome dal testo. La foto viene ritagliata sui bordi della carta e raddrizzata, senza lo sfondo; si salva mentre inquadri già la carta successiva.</li>
       <li>Togli la carta e metti la successiva. Per una seconda copia uguale, togli la carta e rimettila.</li>
     </ol>
+    <h3>Il riconoscimento dall'illustrazione</h3>
+    <p>Ogni settimana GitHub calcola un'<b>impronta</b> dell'illustrazione di tutte le carte del catalogo (circa 19.600) e l'app la tiene sul telefono. Durante la scansione l'app calcola la stessa impronta sulla carta inquadrata e trova le più somiglianti in pochi millesimi di secondo. L'illustrazione è la stessa in tutte le lingue occidentali, quindi vale anche per le carte italiane.</p>
+    <ul class="points">
+      <li><b>Lingua</b>: l'illustrazione dice quale carta è, non in che lingua. L'app usa l'edizione scelta da te; con <i>Automatica</i> legge il codice accanto al numero (carte dal 2023, per esempio «MEW IT») o, la prima volta, il testo della carta, e poi tiene la stessa lingua per la pila. Se cambi lingua a metà pila, scegli l'edizione.</li>
+      <li><b>Ristampe con la stessa illustrazione</b> (per esempio Set Base e Set Base 2, Fossil e Legendary Collection, holo e non holo): l'app legge il numero per sceglierla; se non ci riesce, mostra le carte possibili e tocchi quella giusta.</li>
+      <li><b>Carte giapponesi, coreane e cinesi</b> hanno codici diversi: per queste l'app usa il numero, come prima.</li>
+      <li>Le carte nuove entrano nelle impronte entro una settimana dall'arrivo nel catalogo; nel frattempo l'app le riconosce dal numero.</li>
+    </ul>
     <h3>Il pulsante bianco: scatta</h3>
     <p>Se tieni la carta ferma e il numero non si legge (numero rovinato, riflessi, carte molto vecchie), dopo qualche secondo l'app scatta da sola e prova a riconoscerla anche dal nome. Il <b>pulsante bianco</b> sotto la cornice fa lo stesso subito.</p>
     <h3>Lingua ed edizione</h3>
@@ -196,7 +218,7 @@ a { color: var(--accent); }
     </ul>
     <h3>Senza fotocamera</h3>
     <p>Scrivi il numero nel campo <i>Numero</i> (per esempio <span class="num">25/165</span>; vanno bene anche <span class="num">25 165</span> o <span class="num">25.165</span>; per le promo <span class="num">MEP 101</span>) e tocca <span class="k">Aggiungi</span>.</p>
-    <div class="tip"><b>Alla fine della sessione</b>Tocca <span class="k">Salva la copia di sicurezza</span> sotto la lista: le carte e le foto finiscono su iCloud o OneDrive.</div>
+    <div class="tip"><b>Alla fine della sessione</b>Tocca <span class="k">Salva la copia di sicurezza</span> sotto la lista: le carte e le foto finiscono su iCloud, Google Drive o OneDrive.</div>
   </section>
 
   <section class="chap" id="collezione">
@@ -255,29 +277,29 @@ a { color: var(--accent); }
 
   <section class="chap" id="backup">
     <h2><span class="n">9</span>Copia di sicurezza</h2>
-    <p>La collezione e le foto sono salvate sull'iPhone, dentro l'app. Se togli l'app dalla schermata Home o perdi il telefono, i dati si cancellano: per questo l'app ti aiuta a salvarli fuori dal telefono.</p>
-    <h3>La copia completa (su iCloud o OneDrive)</h3>
+    <p>La collezione e le foto sono salvate sul telefono, dentro l'app. Se togli l'app dalla schermata Home o perdi il telefono, i dati si cancellano: per questo l'app ti aiuta a salvarli fuori dal telefono.</p>
+    <h3>La copia completa (su iCloud, Google Drive o OneDrive)</h3>
     <ol class="steps">
       <li>Tocca <span class="k">Salva la copia di sicurezza</span> alla fine della sessione di scansione, oppure <span class="k">⚙︎ Impostazioni</span> › <span class="k">Salva copia</span>.</li>
-      <li>Scegli <b>Salva su File</b> e una cartella di iCloud Drive o OneDrive. Il file contiene tutte le carte, le impostazioni e le foto.</li>
-      <li>Per ripristinare (anche su un altro iPhone): <span class="k">⚙︎ Impostazioni</span> › <span class="k">Ripristina da copia</span> e scegli il file.</li>
+      <li>Sull'iPhone scegli <b>Salva su File</b> e una cartella di iCloud Drive o OneDrive; su Android scegli <b>Drive</b> o <b>OneDrive</b> (oppure il file finisce in Download). Il file contiene tutte le carte, le impostazioni e le foto.</li>
+      <li>Per ripristinare (anche su un altro telefono, pure da iPhone ad Android e viceversa): <span class="k">⚙︎ Impostazioni</span> › <span class="k">Ripristina da copia</span> e scegli il file.</li>
     </ol>
     <p>Quando hai carte non ancora salvate, in cima alla collezione compare un promemoria con il pulsante <span class="k">Salva</span>. Il ripristino sostituisce la collezione sul telefono; subito dopo compare <span class="k">Annulla</span> per qualche secondo.</p>
     <h3>Le versioni automatiche (sul telefono)</h3>
-    <p>L'app salva da sola una versione della collezione ogni ora e tiene le ultime 30. In <span class="k">⚙︎ Impostazioni</span> › <b>Versioni salvate sul telefono</b> puoi tornare a una di queste, per esempio dopo un errore. Restano sul telefono, quindi non sostituiscono la copia su iCloud o OneDrive.</p>
+    <p>L'app salva da sola una versione della collezione ogni ora e tiene le ultime 30. In <span class="k">⚙︎ Impostazioni</span> › <b>Versioni salvate sul telefono</b> puoi tornare a una di queste, per esempio dopo un errore. Restano sul telefono, quindi non sostituiscono la copia su iCloud, Google Drive o OneDrive.</p>
   </section>
 
   <section class="chap" id="famiglia">
     <h2><span class="n">10</span>Collezioni di famiglia</h2>
-    <p>Ognuno scansiona le sue carte sul proprio iPhone, e potete vedere le collezioni degli altri. Funziona con un file: niente account, i dati restano tra voi.</p>
+    <p>Ognuno scansiona le sue carte sul proprio telefono (iPhone o Android), e potete vedere le collezioni degli altri. Funziona con un file: niente account, i dati restano tra voi.</p>
     <h3>Chi condivide (per esempio tuo figlio)</h3>
     <ol class="steps">
       <li>La prima volta: <span class="k">⚙︎ Impostazioni</span> › <b>Collezioni di famiglia</b> › scrivi il tuo nome.</li>
-      <li>Nella Collezione tocca <span class="k">Condividi</span> e manda il file: WhatsApp, AirDrop o una cartella iCloud condivisa in famiglia.</li>
+      <li>Nella Collezione tocca <span class="k">Condividi</span> e manda il file: WhatsApp, AirDrop o Quick Share, oppure una cartella iCloud o Google Drive condivisa in famiglia.</li>
     </ol>
     <h3>Chi riceve</h3>
     <ol class="steps">
-      <li>Salva il file ricevuto in File (in WhatsApp: tieni premuto il file › Condividi › Salva in File).</li>
+      <li>Salva il file ricevuto: sull'iPhone in File (in WhatsApp: tieni premuto il file › Condividi › Salva in File); su Android finisce in Download.</li>
       <li><span class="k">⚙︎ Impostazioni</span> › <b>Collezioni di famiglia</b> › <span class="k">Apri una collezione ricevuta</span> e scegli il file.</li>
       <li>In cima alla Collezione compaiono le pillole <b>La mia · Marco</b>: tocca il nome per guardare la sua collezione con foto, valore, raccoglitori e doppioni (utili per gli scambi). <span class="k">Torna alla tua</span> per tornare alla tua.</li>
     </ol>
@@ -286,41 +308,43 @@ a { color: var(--accent); }
 
   <section class="chap" id="sicurezza">
     <h2><span class="n">11</span>Sicurezza e privacy</h2>
-    <p>Raccoglitore non ha account, password né un server suo. Tutto quello che inserisci resta sull'iPhone.</p>
+    <p>Raccoglitore non ha account, password né un server suo. Tutto quello che inserisci resta sul telefono.</p>
     <div class="tablebox"><table>
       <thead><tr><th>Cosa</th><th>Dove va</th></tr></thead>
       <tbody>
-        <tr><td>Collezione, prezzi pagati, note</td><td>Solo sull'iPhone e nelle copie di sicurezza che salvi tu</td></tr>
+        <tr><td>Collezione, prezzi pagati, note</td><td>Solo sul telefono e nelle copie di sicurezza che salvi tu</td></tr>
         <tr><td>Immagini della fotocamera e foto delle tue carte</td><td>Lette e salvate sul telefono, mai inviate a nessuno; finiscono solo nelle copie di sicurezza che salvi tu</td></tr>
         <tr><td>Ricerche e numeri delle carte</td><td>Al catalogo TCGdex, che vede l'indirizzo IP ma non sa chi sei</td></tr>
         <tr><td>Immagini delle carte</td><td>Scaricate da TCGdex e salvate sul telefono per l'uso senza rete</td></tr>
+        <tr><td>Impronte delle illustrazioni e listino Cardmarket</td><td>Scaricati dal tuo GitHub (solo lettura): non si invia nulla</td></tr>
       </tbody>
     </table></div>
     <h3>Le protezioni dell'app</h3>
     <ul class="points">
       <li>Il lettore (numero, lingua e nome) e i caratteri sono dentro l'app: non si carica codice da altri siti e non si contatta Google. Il riconoscimento avviene tutto sul telefono.</li>
-      <li>Una regola di sicurezza (CSP) permette all'app di collegarsi solo al catalogo TCGdex e di eseguire solo il proprio codice.</li>
+      <li>Una regola di sicurezza (CSP) permette all'app di collegarsi solo al catalogo TCGdex e al tuo GitHub (listino e impronte) e di eseguire solo il proprio codice.</li>
       <li>Ogni copia di sicurezza viene controllata prima del ripristino: i dati non validi vengono scartati e non possono eseguire codice.</li>
       <li>Nei file CSV i testi che Excel scambierebbe per formule vengono resi innocui.</li>
     </ul>
     <h3>Cosa tocca a te</h3>
     <ul class="points">
-      <li>Tieni l'iPhone protetto da codice: i dati dell'app sono protetti come il resto del telefono.</li>
-      <li>Ripristina solo copie di sicurezza tue. Il file contiene anche prezzi pagati e note: conservalo nel tuo iCloud o OneDrive.</li>
+      <li>Tieni il telefono protetto da codice (o impronta): i dati dell'app sono protetti come il resto del telefono.</li>
+      <li>Ripristina solo copie di sicurezza tue. Il file contiene anche prezzi pagati e note: conservalo nel tuo iCloud, Google Drive o OneDrive.</li>
       <li>Il repository su GitHub è pubblico ma contiene solo il programma, nessun dato personale.</li>
     </ul>
   </section>
 
   <section class="chap" id="problemi">
     <h2><span class="n">12</span>Problemi e domande</h2>
-    <details><summary>La fotocamera non si apre</summary><p>Apri Impostazioni dell'iPhone › Safari › Fotocamera e scegli “Chiedi” o “Consenti”. Se l'app è installata sulla Home, chiudila e riaprila.</p></details>
-    <details><summary>La carta non viene riconosciuta</summary><p>Avvicina la carta finché riempie la cornice, tienila dritta, evita riflessi e luce radente sulla parte bassa. Se non basta, tocca il pulsante bianco per scattare: l'app prova anche con il nome. In alternativa scrivi il numero a mano.</p></details>
+    <details><summary>La fotocamera non si apre</summary><p>Sull'iPhone: Impostazioni › Safari › Fotocamera e scegli “Chiedi” o “Consenti”. Su Android: tieni premuta l'icona dell'app › <b>ⓘ Info app</b> › Autorizzazioni › Fotocamera › “Consenti solo mentre l'app è in uso” (in Chrome: ⋮ › Impostazioni › Impostazioni sito › Fotocamera). Poi chiudi l'app e riaprila.</p></details>
+    <details><summary>La carta non viene riconosciuta</summary><p>Avvicina la carta finché riempie la cornice, tienila dritta e ferma, evita riflessi sull'illustrazione e luce radente sulla parte bassa. Un fondo scuro e uniforme aiuta a trovare i bordi. Se non basta, tocca il pulsante bianco per scattare: l'app prova anche con il nome. In alternativa scrivi il numero a mano.</p></details>
     <details><summary>«Non è nel catalogo»</summary><p>Il catalogo TCGdex non ha quella carta (succede con molte buste speciali cinesi e coreane). Aggiungila dal riquadro con la foto: resta nella collezione come le altre, solo senza prezzo automatico.</p></details>
     <details><summary>La lingua è sbagliata</summary><p>Nella lista della sessione tocca la sigla dell'edizione e scegli quella giusta. Le carte a tutta immagine hanno poco testo: se ne scansioni molte di una lingua, scegli l'edizione al posto di <i>Automatica</i>.</p></details>
     <details><summary>“Nessuna carta con questo numero”</summary><p>Controlla l'edizione scelta: una carta giapponese va scansionata con edizione JP. Le espansioni appena uscite possono comparire nel catalogo qualche giorno dopo.</p></details>
     <details><summary>La carta aggiunta è sbagliata</summary><p>Tocca <span class="k">Annulla</span> subito dopo, oppure <span class="k">✕</span> nella lista della sessione. Per evitarlo, usa “Scansiona carte di questa espansione”.</p></details>
     <details><summary>Manca il prezzo di una carta</summary><p>Non tutte le carte sono vendute su Cardmarket, soprattutto le asiatiche. Inserisci un valore tuo nella copia.</p></details>
-    <details><summary>Ho cambiato iPhone</summary><p>Salva la copia di sicurezza sul vecchio, installa l'app sul nuovo e ripristina il file.</p></details>
+    <details><summary>Ho cambiato telefono</summary><p>Salva la copia di sicurezza sul vecchio, installa l'app sul nuovo e ripristina il file. Funziona anche da iPhone ad Android (per esempio un Samsung Galaxy S24) e viceversa.</p></details>
+    <details><summary>Il tasto Indietro di Android chiude l'app</summary><p>Dalla schermata della collezione il tasto Indietro esce dall'app, come nelle altre app. Dalle altre schermate (scheda di una carta, raccoglitore, impostazioni, altre schede in basso) torna indietro di un passo.</p></details>
     <details><summary>Funziona senza connessione?</summary><p>L'app si apre e mostra la collezione anche offline. Servono la connessione per la scansione, la ricerca e l'aggiornamento dei prezzi.</p></details>
       <h3>Una carta non ha l'immagine</h3>
     <p>Le immagini arrivano dal catalogo TCGdex, che non le ha per tutte le carte. Quando manca l'immagine italiana, l'app usa quella inglese della stessa carta (stessa illustrazione, testo in inglese). Alcune carte non hanno immagini in nessuna lingua: le promo <b>MEP</b>, la <b>Collezione classica</b> del 30° Anniversario, molte carte giapponesi del 30° e alcune cinesi, oltre alle carte prese da Cardmarket. Per queste l'app mostra <b>la tua foto</b> (nella scheda e nel raccoglitore); senza foto resta il retro con nome e numero. Per aggiungere una foto: scheda della carta › tocca la copia › <span class="k">Aggiungi foto</span>.</p>
@@ -331,6 +355,7 @@ a { color: var(--accent); }
     <div class="tablebox"><table class="news">
       <thead><tr><th>Versione</th><th>Data</th><th>Cosa cambia</th></tr></thead>
       <tbody>
+        <tr><td>2.0</td><td>08/11/2026</td><td>Scansione molto più veloce, come PokéCardex: la carta si riconosce dall'illustrazione (impronte di circa 19.600 carte, aggiornate ogni settimana), di solito in meno di un secondo; se la lingua è nota si aggiunge subito e foto e variante si salvano mentre inquadri la carta successiva; il telefono vibra a ogni aggiunta. Ristampe con la stessa illustrazione scelte dal numero. Android ottimizzato (Samsung Galaxy S24): pulsante Installa, icona adattiva, scorciatoie Scansiona e Valore, tasto Indietro che chiude schede e pannelli, messa a fuoco continua e pulsante Luce, testi per Google Drive e Quick Share.</td></tr>
         <tr><td>1.9</td><td>02/11/2026</td><td>Carte cinesi fuori catalogo (Gem Pack CBB4C): riconosciute come cinesi anche se olografiche, nome cinese letto e tradotto in inglese, proposte da Cardmarket con versione e prezzo. Ricerca su Cardmarket anche scrivendo il nome in cinese o giapponese. Foto dal rullino su sfondi a trama (tessuto) ritagliate meglio.</td></tr>
         <tr><td>1.8</td><td>02/11/2026</td><td>Carte che il catalogo TCGdex non ha (es. Pokémon Trading Card Game Classic, Professor Oak 025/034): l'app cerca il nome su Cardmarket e le propone con il prezzo, invece di aggiungere per errore la carta del catalogo con lo stesso numero. Nomi chiari su fondo argentato letti meglio. Ricerca su Cardmarket anche dal modulo delle carte fuori catalogo. Immagini: se il catalogo italiano non ha l'immagine (es. carte vecchie) o l'immagine non si apre, si usa quella inglese; se non esiste da nessuna parte (promo MEP, Collezione classica del 30°, alcune giapponesi e cinesi) compare la tua foto.</td></tr>
         <tr><td>1.7</td><td>01/11/2026</td><td>Carte promo: l'app legge il codice MEP/SVP (es. MEP IT 101) e trova le promo del 30° Anniversario anche se il catalogo italiano non le ha ancora. Collezione classica del 30° Anniversario. Ricerca e raccoglitore completati con le carte che mancano nel catalogo italiano. Link a Federicstore per comprare e confrontare i prezzi (il valore resta Cardmarket). Eliminare una copia dalla scheda della carta con la ✕ e Annulla.</td></tr>

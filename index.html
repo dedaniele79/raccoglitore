@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jJWWvsrXxjCRpFZVmvQkMgeZ/0TxDVAF+17NNztH3LE=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Thkk7pi0cUFQLPxCM9Ym/2hp4wK8IReng2PinZQiRA4=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -250,6 +250,9 @@ button.row, a.row { width: 100%; border: 0; background: none; text-align: left; 
 .scanner .controls { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; gap: 8px; }
 .scanner .controls .btn { background: rgba(5,6,15,.72); color: #fff; box-shadow: none; }
 .scanner .controls .btn.gold { background: var(--gold); color: var(--gold-ink); }
+.scanner .torch { position: absolute; right: 8px; top: 58px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: rgba(5,6,15,.72); color: #fff; display: grid; place-items: center; padding: 0; }
+.scanner .torch svg { width: 20px; height: 20px; }
+.scanner .torch[aria-pressed="true"] { background: var(--gold); color: var(--gold-ink); }
 .scanner .demo-cam { position: absolute; inset: 0; background: radial-gradient(60% 50% at 50% 50%, #3a3f5c 0%, #15182b 70%), #15182b; }
 .scanner .demo-cam::after { content: ""; position: absolute; left: 50%; top: 50%; width: 60%; aspect-ratio: 245 / 337; transform: translate(-50%, -50%) rotate(-2deg); border-radius: 10px; background: linear-gradient(160deg, #f7c724 0 6%, #e8edf7 6% 94%, #f7c724 94%); box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: .9; }
 .scanner.off { display: grid; place-items: center; color: #cfd5f5; padding: 24px; text-align: center; aspect-ratio: 4 / 3; }
@@ -360,7 +363,7 @@ const RARITY_IT = {
   "rare holo vstar": "Rara holo VSTAR", "rare ultra": "Ultra rara", "rare secret": "Rara segreta", "rare rainbow": "Rara arcobaleno",
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
-const APP_VERSION = "1.9";
+const APP_VERSION = "2.0";
 const APP_DATE = "2 novembre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
@@ -1121,6 +1124,7 @@ function render() {
   if (ui.tab !== "scan") stopScanner();
   const banner = previewBanner() + familyBanner();
   ({ collection: renderCollection, scan: renderScan, value: renderValue, trades: renderTrades, search: renderSearch })[ui.tab](banner);
+  syncBack();
 }
 
 // ================================================================ Collezione: edizione → serie → espansione
@@ -1225,18 +1229,37 @@ function showMine() {
   box.innerHTML = list.length ? `<p class="note">${list.length} carte trovate</p><div class="grid-cards" style="margin-top:8px">${list.map(g => `<button class="pocket owned ${isFoil(g.card) ? "foil" : ""}" data-action="open-card" data-id="${esc(g.card.id)}" data-lang="${esc(g.card.lang)}" data-ed="${esc(g.ed)}">${art(g.card)}<span class="count">${g.n}</span><span class="label name-l">${esc(g.card.name)}</span><span class="label">${esc(LANG[g.ed].short)} · ${esc(g.card.setName)}</span><span class="label euro" style="color:var(--ink)">${euro(g.v)}</span></button>`).join("")}</div>`
     : `<section class="panel empty"><h2>Nessuna carta trovata</h2><p class="note">Non hai carte che corrispondono a “${esc(ui.mineQ)}”. Per cercare nel catalogo usa la scheda Cerca.</p></section>`;
 }
-// Avvisi in cima alla collezione: installazione sull'iPhone e copia di sicurezza.
+// Avvisi in cima alla collezione: installazione (iPhone e Android) e copia di sicurezza.
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 const unsavedCount = () => state.copies.filter(c => c.added > (state.lastBackup || 0)).length;
 const isStandalone = () => window.navigator.standalone === true || window.matchMedia?.("(display-mode: standalone)").matches;
+// Android (es. Samsung Galaxy S24): Chrome propone l'installazione con un pulsante; in Samsung Internet si passa dal menu.
+const isAndroid = /Android/i.test(navigator.userAgent), isSamsungBrowser = /SamsungBrowser/i.test(navigator.userAgent);
+const CLOUD = isIOS ? "iCloud o OneDrive" : isAndroid ? "Google Drive o OneDrive" : "OneDrive o un'altra cartella sicura";
+let installEvt = null;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; if (ui.tab === "collection" && !sheet) render(); });
+addEventListener("appinstalled", () => { installEvt = null; state.settings.installDismissed = true; Store.save(); if (!sheet) render(); });
+function installHow() {
+  if (isIOS) return "In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.";
+  if (installEvt) return "Tocca Installa: l'icona compare tra le app del telefono.";
+  if (isSamsungBrowser) return "In Samsung Internet tocca il menu ≡ in basso, poi “Aggiungi pagina a” › “Schermata Home”.";
+  if (isAndroid) return "In Chrome tocca ⋮ in alto a destra, poi “Installa app” (o “Aggiungi a schermata Home”).";
+  return "";
+}
+async function installApp() {
+  if (!installEvt) return;
+  const e = installEvt; installEvt = null;
+  try { await e.prompt(); const r = await e.userChoice; if (r?.outcome === "accepted") { state.settings.installDismissed = true; Store.save(); } } catch {}
+  render();
+}
 function notices() {
   let html = "";
-  if (!isPreview && isIOS && !isStandalone() && !state.settings.installDismissed) {
-    html += `<div class="notice"><div class="grow"><b>Installa l'app sull'iPhone</b><span class="sub">In Safari tocca Condividi, poi “Aggiungi alla schermata Home”. Si aprirà a tutto schermo, come un'app.</span></div><button class="btn small ghost" data-action="dismiss-install">Ok</button></div>`;
+  if (!isPreview && (isIOS || isAndroid || installEvt) && !isStandalone() && !state.settings.installDismissed) {
+    html += `<div class="notice"><div class="grow"><b>Installa l'app ${isIOS ? "sull'iPhone" : "sul telefono"}</b><span class="sub">${installHow()} Si aprirà a tutto schermo, come un'app.</span></div>${installEvt ? `<button class="btn small gold" data-action="install">Installa</button>` : ""}<button class="btn small ghost" data-action="dismiss-install">${installEvt ? "Dopo" : "Ok"}</button></div>`;
   }
   const days = state.lastBackup ? Math.floor((Date.now() - state.lastBackup) / 864e5) : null, unsaved = unsavedCount();
   if (!isPreview && unsaved && (unsaved >= 10 || days == null || days >= 2)) {
-    html += `<div class="notice"><div class="grow"><b>${unsaved} ${unsaved === 1 ? "carta non ancora salvata" : "carte non ancora salvate"}</b><span class="sub">${days == null ? "Non hai ancora una copia di sicurezza." : `L'ultima copia è di ${days ? days + (days === 1 ? " giorno" : " giorni") + " fa" : "oggi"}.`} Salvala su iCloud o OneDrive: contiene anche le foto.</span></div><button class="btn small gold" data-action="backup">Salva</button></div>`;
+    html += `<div class="notice"><div class="grow"><b>${unsaved} ${unsaved === 1 ? "carta non ancora salvata" : "carte non ancora salvate"}</b><span class="sub">${days == null ? "Non hai ancora una copia di sicurezza." : `L'ultima copia è di ${days ? days + (days === 1 ? " giorno" : " giorni") + " fa" : "oggi"}.`} Salvala su ${CLOUD}: contiene anche le foto.</span></div><button class="btn small gold" data-action="backup">Salva</button></div>`;
   }
   return html;
 }
@@ -1802,6 +1825,13 @@ async function startScanner() {
     // Più pixel = numero più leggibile: chiedo il 4K, l'iPhone scende da solo se non può.
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false });
     if (ui.tab !== "scan") { stopScanner(); return; }
+    // Android: messa a fuoco continua e, se il telefono ce l'ha, la luce per leggere le carte al buio.
+    try {
+      const track = stream.getVideoTracks()[0], caps = track?.getCapabilities?.() || {};
+      if (caps.focusMode?.includes("continuous")) track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+      scan.torchCap = !!caps.torch; scan.torch = false;
+      const tb = $("#torch"); if (tb) { tb.hidden = !scan.torchCap; tb.setAttribute("aria-pressed", "false"); }
+    } catch {}
     attachVideo();
     if (!scan.running) { scan.running = true; loop(); }
   } catch {
@@ -1814,7 +1844,7 @@ function attachVideo() {
   if (v && v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); }
 }
 function stopScanner() {
-  scan.running = false;
+  scan.running = false; scan.torch = false;
   clearTimeout(scan.timer);
   if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
@@ -1837,18 +1867,26 @@ const sigSpread = a => { const m = a.reduce((x, y) => x + y, 0) / a.length; retu
 async function loop() {
   if (!scan.running || ui.tab !== "scan") return;
   const v = $("#video");
+  const next = () => { scan.busy = false; if (scan.running) scan.timer = setTimeout(loop, 40); };
   if (!scan.paused && !scan.busy && !scan.pending && !sheet && v && v.videoWidth) {
     scan.busy = true;
     try {
       const worker = await loadOCR(), r = frameRect(v);
       if (r && scan.capture) { scan.capture = false; scan.handled = true; scan.votes.clear(); await captureFrom(v, [r]); }
       else if (r) {
-        if (!scan.votes.size) setScanStatus(scan.lockSet ? `Inquadra una carta di ${scan.lockSet.name}` : "Inquadra la carta: leggo il numero", "reading");
+        if (!scan.votes.size) setScanStatus(scan.lockSet ? `Inquadra una carta di ${scan.lockSet.name}` : "Inquadra la carta", "reading");
         const totals = await knownTotals(scanLangs()), k = scan.frame++;
         // Carta nuova o mossa: riparto. Carta ferma: conto i fotogrammi.
         const sig = signature(v, r);
-        if (sigDiff(sig, scan.sig) > 16) { scan.steady = 0; scan.handled = false; } else scan.steady = (scan.steady || 0) + 1;
+        if (sigDiff(sig, scan.sig) > 16) { scan.steady = 0; scan.handled = false; scan.imgTries = 0; } else scan.steady = (scan.steady || 0) + 1;
         scan.sig = sig;
+        // Prima l'illustrazione (pochi millesimi di secondo): se due fotogrammi di fila dicono la stessa carta, è fatta.
+        if (Impronte.ready && !scan.handled && imageLangOk()) {
+          const f = imageFrame(v, r), hitImg = imgVote(f.guess);
+          if (hitImg) { scan.handled = true; scan.votes.clear(); await recognizeImage(hitImg, f.quad ? warpCard(v, f.quad, 1100) : snapshot(v, f.rect, 1100)).catch(() => setScanStatus("Non riesco a riconoscere la carta: riprova", "")); return next(); }
+          // Promettente: per qualche fotogramma niente lettura del numero, così la conferma arriva subito.
+          if (f.guess && f.guess.top.s <= 16 && (scan.imgTries = (scan.imgTries || 0) + 1) <= 4) { setScanStatus("Riconosco la carta…", "reading"); return next(); }
+        }
         // Un lato per fotogramma: quello dell'ultima carta riconosciuta due volte su tre, altrimenti si alternano.
         const side = scan.side == null ? k % 2 : (k % 3 === 2 ? 1 - scan.side : scan.side);
         const pass = NUM_PASSES[k % NUM_PASSES.length];
@@ -1873,6 +1911,8 @@ async function captureFrom(src, rects, whole) {
   let still = null;
   if (whole) { try { const { w, h } = srcSize(src), q = cardEdges(src, { x: 0, y: 0, w, h }, false) || cardBlob(src); if (q) still = warpCard(src, q, 1100); } catch {} }
   else still = cardImage(src, rects[0]);
+  // Prima l'illustrazione: se la carta è riconoscibile così, niente lettura del testo.
+  if (still && Impronte.ready && imageLangOk()) { let g = null; try { g = imageGuess(still); } catch {} if (g?.strong) return recognizeImage(g, still); }
   const tries = still ? [[still, { x: 0, y: 0, w: still.width, h: still.height }]] : rects.map(r => [src, r]);
   let cands = [], used = tries[0];
   for (const [s, r] of tries) {
@@ -1917,11 +1957,30 @@ async function guessVariant(card, still) {
 async function recognize(still, cands) {
   const n0 = cands[0];
   setScanStatus(n0 ? `Letto ${candLabel(n0)}: riconosco la carta…` : "Riconosco la carta…", "hit");
+  // Via veloce: lingua nota (scelta da te, stampata accanto al numero, o già confermata in questa sessione) e un numero
+  // che porta a una sola carta → la aggiungo subito. Foto e variante arrivano dopo, senza far aspettare la carta successiva.
+  if (n0 && scan.auto) {
+    const code = n0.ed || (scan.lang === "auto" && !n0.promo ? await readLangCode(still).catch(() => null) : null);
+    const lang = scan.lang !== "auto" ? scan.lang : code || (scan.langOk ? scan.lastLang : null);
+    if (lang) {
+      const res = await findByNumber(n0.promo ? { number: String(n0.n).padStart(3, "0"), total: null, promo: n0.promo, region: n0.region } : { number: String(n0.n), total: n0.t }, lang).catch(() => ({ items: [] }));
+      let items = res.items;
+      if (scan.lockSet) { const inSet = items.filter(b => b.setId === scan.lockSet.id); if (inSet.length) items = inSet; }
+      const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
+      const one = items.length === 1 ? items[0] : (lastSet && items.filter(b => b.setId === lastSet).length === 1 ? items.find(b => b.setId === lastSet) : null);
+      if (one) {
+        if (code && scan.lang === "auto") { scan.lastLang = code; scan.langOk = true; }
+        const copy = await addFromScan(one, res.lang, { lang, guess: false, fast: true });
+        if (copy) finishLater(copy, still);
+        return;
+      }
+    }
+  }
   let info;
   try { info = await analyzeCard(still); }
   catch { info = { lang: scan.lang === "auto" ? (scan.lastLang || state.settings.lang) : scan.lang, sure: false, family: null, name: "" }; }
   if (n0?.ed && scan.lang === "auto" && LANG[n0.ed]) Object.assign(info, { lang: n0.ed, sure: true, family: regionOf(n0.ed) === "jp" ? "ja" : "west" });
-  if (info.sure) scan.lastLang = info.lang;
+  if (info.sure) { scan.lastLang = info.lang; scan.langOk = true; }
   const photo = await photoBlob(still).catch(() => null);
   let langs = info.family === "zh" && scan.lang === "auto" ? [info.lang, info.lang === "zh-tw" ? "zh-cn" : "zh-tw"] : [info.lang];
   if (scan.lang === "auto") langs = [...new Set([...langs, ...[scan.lastLang, state.settings.lang, "en", "ja", "zh-tw", "ko", "zh-cn"].filter(Boolean)])];
@@ -2062,6 +2121,7 @@ async function addFromScan(brief, lang, ctx = {}) {
     // Variante scelta da te per la pila, oppure riconosciuta (sicura solo se il catalogo ne ha una sola).
     let variant, vSure = true;
     if (scan.variant !== "auto" && card.variants[scan.variant]) variant = scan.variant;
+    else if (ctx.fast) { const avail = Object.keys(card.variants).filter(k => card.variants[k] && k !== "firstEdition"); variant = avail.includes("normal") ? "normal" : (avail[0] || "normal"); vSure = avail.length <= 1; }
     else { const g = await guessVariant(card, ctx.still); variant = g.variant; vSure = g.sure; }
     const already = state.copies.filter(c => cardOf(c)?.id === card.id && c.lang === ed).length;
     const copy = { id: uid(), added: Date.now(), cardKey: card.key, lang: ed, variant, cond: scan.cond, graded: false, grader: null, grade: null,
@@ -2077,9 +2137,258 @@ async function addFromScan(brief, lang, ctx = {}) {
     setScanStatus(`Aggiunta: ${card.name} ${cardNumber(card.localId, card.official)} · ${LANG[ed]?.short || ed}`, "hit");
     renderScanPanels();
     toast(`${card.name} aggiunta${already ? ` · ne avevi già ${already}` : ""}${ctx.guess ? " · controlla l'edizione" : ""}`, () => removeCopy(copy.id));
+    if ("vibrate" in navigator) try { navigator.vibrate(35); } catch {}
+    return copy;
   } catch (e) {
     setScanStatus("Non riesco a caricare la carta: " + e.message, "");
+    return null;
   }
+}
+// Aprendo la scansione preparo i dati che servono subito (elenco delle espansioni, espansione bloccata o ultima usata).
+function prefetchScan() {
+  try {
+    const langs = scanLangs().slice(0, 3); langs.forEach(l => setIndex(l));
+    const last = scan.session[0] && cardOf(scan.session[0]) || [...state.copies].sort((a, b) => b.added - a.added).map(cardOf).find(Boolean);
+    const sets = [scan.lockSet?.id, last?.setId].filter(Boolean);
+    for (const id of sets) for (const l of [...new Set([last?.lang, ...langs].filter(Boolean))]) api(l, `sets/${encodeURIComponent(id)}`).catch(() => {});
+    loadOCR().catch(() => {});
+    Impronte.load();
+  } catch {}
+}
+// Dopo l'aggiunta veloce: foto e variante senza far aspettare la carta successiva.
+async function finishLater(copy, still) {
+  try {
+    const blob = await photoBlob(still);
+    if (blob && state.copies.includes(copy) && await Photos.put(copy.id, blob)) { copy.photo = true; Store.save(); }
+    const card = cardOf(copy);
+    if (card && scan.variant === "auto" && state.copies.includes(copy)) {
+      const g = await guessVariant(card, still);
+      if (g.variant !== copy.variant) copy.variant = g.variant;
+      const inf = scan.info.get(copy.id); if (inf) inf.vguess = !g.sure;
+      recordSnapshot();
+    }
+  } catch {}
+  if (ui.tab === "scan" && !scan.pending) renderScanPanels();
+}
+// Sigla della lingua stampata accanto al numero sulle carte dal 2023 («MEW IT 025/165», «PAL EN 012/193»).
+const LANGCODE = { tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/", tessedit_pageseg_mode: "11" };
+async function readLangCode(still) {
+  const R = { x: 0, y: 0, w: still.width, h: still.height }, b = band(still, R, 0, 0.6, 0.86, 0.985, 1100); if (!b) return null;
+  const t = (await ocr(await loadOCR(), b, LANGCODE)).text.toUpperCase();
+  const m = t.match(/(?:^|[^A-Z])[A-Z0-9]{2,4}\s*(EN|IT|FR|DE|ES|PT)\s*[0-9O]{1,3}\s*\//) || t.match(/(?:^|[^A-Z])(EN|IT|FR|DE|ES|PT)\s*[0-9O]{2,3}\s*\/\s*[0-9O]{2,3}/);
+  return m ? m[1].toLowerCase() : null;
+}
+
+// ---------------------------------------------------------------- Riconoscimento per immagine (come PokéCardex)
+// Ogni carta del catalogo ha un'impronta dell'illustrazione (calcolata ogni settimana da tools/impronte.py, ramo «impronte»).
+// L'app calcola la stessa impronta sulla carta inquadrata e trova le più simili in pochi millisecondi, senza leggere il testo.
+// Vale per le edizioni occidentali (stessa illustrazione e stesso codice in tutte le lingue); le asiatiche usano il numero.
+const FP_REGION = [0.12, 0.88, 0.14, 0.44];
+const FP_COS = Array.from({ length: 8 }, (_, u) => Float64Array.from({ length: 32 }, (_, x) => Math.cos((2 * x + 1) * u * Math.PI / 64)));
+// Riduzione per medie d'area (ogni pixel d'uscita è la media dei pixel che copre), come il filtro «box».
+function boxResize(src, w, h, ch, ow, oh) {
+  const out = new Float32Array(ow * oh * ch), sx = w / ow, sy = h / oh;
+  for (let oy = 0; oy < oh; oy++) {
+    const y0 = oy * sy, y1 = y0 + sy;
+    for (let ox = 0; ox < ow; ox++) {
+      const x0 = ox * sx, x1 = x0 + sx; let area = 0; const acc = [0, 0, 0];
+      for (let yy = y0 | 0; yy < y1 && yy < h; yy++) {
+        const fy = Math.min(y1, yy + 1) - Math.max(y0, yy);
+        for (let xx = x0 | 0; xx < x1 && xx < w; xx++) {
+          const a = (Math.min(x1, xx + 1) - Math.max(x0, xx)) * fy, j = (yy * w + xx) * ch;
+          for (let c = 0; c < ch; c++) acc[c] += src[j + c] * a;
+          area += a;
+        }
+      }
+      const o = (oy * ow + ox) * ch;
+      for (let c = 0; c < ch; c++) out[o + c] = area ? acc[c] / area : 0;
+    }
+  }
+  return out;
+}
+// card: carta intera dritta (canvas). Restituisce { hi, lo } (64 bit di forma) e col (27 valori RGB della zona ridotta a 3x3).
+function fingerprint(card) {
+  const W = card.width, H = card.height, [fx0, fx1, fy0, fy1] = FP_REGION;
+  const x0 = Math.round(W * fx0), y0 = Math.round(H * fy0), rw = Math.round(W * fx1) - x0, rh = Math.round(H * fy1) - y0;
+  const d = card.getContext("2d", { willReadFrequently: true }).getImageData(x0, y0, rw, rh).data, rgb = new Float32Array(rw * rh * 3);
+  for (let i = 0, j = 0; i < d.length; i += 4, j += 3) { rgb[j] = d[i]; rgb[j + 1] = d[i + 1]; rgb[j + 2] = d[i + 2]; }
+  const r128 = boxResize(rgb, rw, rh, 3, 128, 128).map(Math.round), gray = new Float32Array(128 * 128);
+  for (let i = 0; i < gray.length; i++) gray[i] = 0.299 * r128[i * 3] + 0.587 * r128[i * 3 + 1] + 0.114 * r128[i * 3 + 2];
+  const g = boxResize(gray, 128, 128, 1, 32, 32), tmp = new Float64Array(32 * 8), vals = [];
+  for (let y = 0; y < 32; y++) for (let u = 0; u < 8; u++) { let t = 0; for (let x = 0; x < 32; x++) t += g[y * 32 + x] * FP_COS[u][x]; tmp[y * 8 + u] = t; }
+  for (let v = 0; v < 8; v++) for (let u = 0; u < 8; u++) { let t = 0; for (let y = 0; y < 32; y++) t += tmp[y * 8 + u] * FP_COS[v][y]; vals.push(t); }
+  vals.shift();
+  const med = [...vals].sort((a, b) => a - b)[vals.length >> 1];
+  let lo = 0, hi = 0;
+  vals.forEach((c, i) => { if (c > med) { if (i < 32) lo |= 1 << i; else hi |= 1 << (i - 32); } });
+  const col = Uint8Array.from(boxResize(r128, 128, 128, 3, 3, 3), Math.round);
+  return { hi: hi >>> 0, lo: lo >>> 0, col };
+}
+const popcount = x => { x -= (x >>> 1) & 0x55555555; x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (((x + (x >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24; };
+// Colore senza la luce: tolgo la media di ogni canale (una foto più scura o più gialla resta simile).
+function centered(col) { const m = [0, 1, 2].map(c => { let t = 0; for (let k = c; k < 27; k += 3) t += col[k]; return t / 9; }); return Float32Array.from(col, (v, k) => v - m[k % 3]); }
+const IMPRONTE_URL = CM_DATA ? CM_DATA.replace(/dati\/cm\/$/, "impronte/impronte.json") : null;
+const Impronte = {
+  ready: false, loading: null, n: 0, ids: null, hi: null, lo: null, col: null,
+  load() {
+    if (this.ready || !IMPRONTE_URL || !("caches" in window)) return Promise.resolve(this.ready);
+    return this.loading ||= (async () => {
+      // Le impronte (circa 2 MB) restano in memoria sul telefono e si aggiornano una volta alla settimana.
+      const cache = await caches.open("raccoglitore-impronte"), old = await cache.match(IMPRONTE_URL);
+      let res = old;
+      const age = old ? Date.now() - (parseInt(old.headers.get("x-scaricato"), 10) || 0) : Infinity;
+      if (age > 7 * 864e5 && navigator.onLine !== false) {
+        try {
+          const r = await fetch(IMPRONTE_URL, { cache: "no-cache" });
+          if (r.ok) { const body = await r.blob(); res = new Response(body, { headers: { "content-type": "application/json", "x-scaricato": String(Date.now()) } }); await cache.put(IMPRONTE_URL, res.clone()); }
+        } catch {}
+      }
+      if (!res) return false;
+      const j = await res.json(); if (j.versione !== 1) return false;
+      const n = j.carte.length; this.ids = new Array(n); this.hi = new Uint32Array(n); this.lo = new Uint32Array(n); this.col = new Float32Array(n * 27);
+      j.carte.forEach(([id, h, c], i) => {
+        this.ids[i] = id; this.hi[i] = parseInt(h.slice(0, 8), 16); this.lo[i] = parseInt(h.slice(8), 16);
+        const b = atob(c); this.col.set(centered(Uint8Array.from(b, ch => ch.charCodeAt(0))), i * 27);
+      });
+      this.n = n; this.ready = true;
+      return true;
+    })().catch(() => { this.loading = null; return false; });
+  },
+  // Le carte più somiglianti: prima la forma (bit diversi), poi il colore sulle 60 più vicine. Punteggio basso = più simile.
+  match(fp, k = 8) {
+    if (!this.ready) return [];
+    const near = [], cc = centered(fp.col);
+    for (let i = 0; i < this.n; i++) {
+      const d = popcount(this.hi[i] ^ fp.hi) + popcount(this.lo[i] ^ fp.lo);
+      if (d <= 24) near.push([d, i]);
+    }
+    near.sort((a, b) => a[0] - b[0]);
+    return near.slice(0, 60).map(([d, i]) => {
+      let t = 0; for (let k2 = 0; k2 < 27; k2++) t += Math.abs(this.col[i * 27 + k2] - cc[k2]);
+      return { id: this.ids[i], d, s: d + 0.15 * t / 27, i };
+    }).sort((a, b) => a.s - b.s).slice(0, k);
+  },
+  // Stessa illustrazione (ristampe come Set Base e Set Base 2 o Evoluzioni, holo e non holo di Fossil): impronte molto vicine.
+  // Due illustrazioni diverse distano quasi sempre più di 12 bit su 63.
+  sameArt(a, b) { return popcount(this.hi[a.i] ^ this.hi[b.i]) + popcount(this.lo[a.i] ^ this.lo[b.i]) <= 8; }
+};
+// Soglie ricavate dalla prova su 600 carte con foto simulate (tools/impronte.py --prova): con punteggio fino a 13 e 5 punti
+// di distacco dalla prima illustrazione diversa, due fotogrammi d'accordo sbagliano 2 volte su 1000.
+const IMG_STRONG = 13, IMG_GAP = 5;
+function imageGuess(card) {
+  const m = Impronte.match(fingerprint(card));
+  if (!m.length) return null;
+  const top = m[0], group = m.filter(x => x === top || Impronte.sameArt(top, x));
+  const other = m.find(x => !group.includes(x));
+  return { top, group, gap: other ? other.s - top.s : 99, strong: top.s <= IMG_STRONG && (!other || other.s - top.s >= IMG_GAP) };
+}
+// Le impronte valgono per le edizioni occidentali: con una lingua asiatica (scelta o confermata) si legge il numero.
+const imageLangOk = () => { const l = scan.lang !== "auto" ? scan.lang : scan.langOk ? scan.lastLang : null; return !l || regionOf(l) === "intl"; };
+// Carta raddrizzata in piccolo (come le immagini del catalogo) e le carte più somiglianti.
+// Provo il ritaglio dai bordi trovati e qualche ritaglio della cornice: vince quello che somiglia di più a una carta
+// (un ritaglio storto dà punteggi alti per tutte). Nelle prove: carta giusta 9 volte su 10, contro 4 su 10 con un ritaglio solo.
+function imageFrame(v, r) {
+  let quad = null; try { quad = cardEdges(v, r, true); } catch {}
+  const crops = quad ? [{ quad }] : [];
+  for (const k of [0.94, 0.88, 1]) crops.push({ rect: { x: r.x + r.w * (1 - k) / 2, y: r.y + r.h * (1 - k) / 2, w: r.w * k, h: r.h * k } });
+  let best = null;
+  for (const c of crops) {
+    let g = null; try { g = imageGuess(c.quad ? warpCard(v, c.quad, 245) : snapshot(v, c.rect, 245)); } catch {}
+    if (g && (!best || g.top.s < best.guess.top.s)) best = { ...c, guess: g };
+    if (best && best.guess.strong && best.guess.top.s <= 6) break;   // già sicurissima: non serve provare altri ritagli
+  }
+  return best || { guess: null };
+}
+// Due fotogrammi di fila con la stessa illustrazione; poi la carta si ignora finché resta inquadrata.
+function imgVote(g) {
+  const now = Date.now(), prev = scan.imgPrev;
+  if (!g || !g.strong) { scan.imgPrev = null; return null; }
+  if (g.group.some(x => scan.cooldown.get("img:" + x.id) > now)) { g.group.forEach(x => scan.cooldown.set("img:" + x.id, now + 2500)); scan.imgPrev = null; return null; }
+  scan.imgPrev = g;
+  if (!prev || !prev.group.some(x => x.id === g.top.id) || now - (prev.at || 0) > 1500) { g.at = now; return null; }
+  scan.imgPrev = null;
+  g.group.forEach(x => scan.cooldown.set("img:" + x.id, now + 3000));
+  return g;
+}
+const setOfId = id => id.slice(0, id.lastIndexOf("-"));
+// Carta riconosciuta dall'illustrazione: manca solo l'edizione (lingua) e, per le ristampe con la stessa illustrazione, quale delle due.
+async function recognizeImage(g, still) {
+  setScanStatus("Carta riconosciuta: la aggiungo…", "hit");
+  const R = { x: 0, y: 0, w: still.width, h: still.height };
+  let ids = g.group.map(x => x.id);
+  if (scan.lockSet) { ids = ids.filter(id => setOfId(id) === scan.lockSet.id); if (!ids.length) return captureStill(still); }
+  // Lingua: scelta da te, stampata accanto al numero (carte dal 2023), già confermata in questa sessione o letta dal testo.
+  let lang = scan.lang !== "auto" ? scan.lang : null, guess = false;
+  if (!lang && ids.some(id => /^(sv|me)/i.test(id))) { const code = await readLangCode(still).catch(() => null); if (code) { lang = code; scan.lastLang = code; scan.langOk = true; } }
+  if (!lang && scan.langOk) lang = scan.lastLang;
+  // Basta il testo delle regole (una lettura, senza il nome): «Debolezza», «Weakness», «Faiblesse»…
+  if (!lang) {
+    setScanStatus("Carta riconosciuta: controllo la lingua…", "hit");
+    const q = await quickLang(still).catch(() => null);
+    if (q) { lang = q.lang; guess = !q.sure; if (q.sure) { scan.lastLang = lang; scan.langOk = true; } }
+  }
+  if (!lang) {
+    const info = await analyzeCard(still).catch(() => null);
+    if (!info || info.family !== "west") return captureStill(still);   // carta asiatica (illustrazione uguale, codice diverso): vale il numero
+    lang = info.lang; guess = !info.sure;
+    if (info.sure) { scan.lastLang = lang; scan.langOk = true; }
+  }
+  if (regionOf(lang) !== "intl") return captureStill(still);
+  // Stessa illustrazione in più espansioni: prima quella appena scansionata, poi il numero stampato.
+  if (ids.length > 1) {
+    const lastSet = scan.session[0] && cardOf(scan.session[0])?.setId;
+    if (lastSet && ids.some(id => setOfId(id) === lastSet)) ids = ids.filter(id => setOfId(id) === lastSet);
+    else {
+      setScanStatus("Ristampa con la stessa illustrazione: leggo il numero…", "hit");
+      const worker = await loadOCR(), totals = await knownTotals([lang, "en"]);
+      let cands = [];
+      for (const pass of NUM_PASSES.slice(0, 2)) { cands = await readNumber(worker, still, R, pass, totals).catch(() => []); if (cands.length) break; }
+      const idx = await setIndex(fallbackLang(lang)).catch(() => ({}));
+      const byNum = ids.filter(id => cands.some(c => sameLocal(id.slice(id.lastIndexOf("-") + 1), String(c.n)) && (!idx[setOfId(id)]?.cardCount?.official || idx[setOfId(id)].cardCount.official === c.t)));
+      if (byNum.length) ids = byNum;
+    }
+  }
+  const found = (await Promise.all(ids.slice(0, 8).map(id => briefFromId(id, lang)))).filter(Boolean).map(x => ({ ...x.brief, catLang: x.lang }));
+  if (!found.length) return captureStill(still);
+  if (scan.auto && found.length === 1) {
+    const copy = await addFromScan(found[0], found[0].catLang, { lang, guess, fast: true });
+    if (copy) finishLater(copy, still);
+    return;
+  }
+  scan.pending = { label: "dall'illustrazione", lang, items: found, ctx: { lang, guess, photo: await photoBlob(still).catch(() => null), still },
+    custom0: { name: "", number: "", total: "", lang } };
+  setScanStatus(found.length > 1 ? `${found.length} carte con questa illustrazione: tocca quella giusta` : "Controlla la carta: toccala per aggiungerla", "");
+  beep(true);
+  renderScanPanels();
+}
+// Lingua di una carta già riconosciuta dall'illustrazione: una sola lettura del testo in basso. Se il testo non sembra
+// occidentale (carta asiatica con la stessa illustrazione, o testo illeggibile) decide l'analisi completa.
+async function quickLang(still) {
+  const body = band(still, { x: 0, y: 0, w: still.width, h: still.height }, 0, 1, 0.5, 0.985, 1000); if (!body) return null;
+  const W = westernLanguage((await ocr(await loadOCR(), body, BLOCK)).text);
+  if (W.code) return { lang: W.code, sure: true };
+  if (W.score >= 6 && W.score >= 2 * W.second) return { lang: W.best, sure: true };
+  if (W.score >= 3 && W.latin >= 60) return { lang: W.best, sure: false };
+  return null;
+}
+// Carta già raddrizzata: leggo il numero e proseguo come una foto scattata.
+async function captureStill(still) {
+  const R = { x: 0, y: 0, w: still.width, h: still.height }, worker = await loadOCR(), totals = await knownTotals(scanLangs());
+  let cands = [];
+  for (const pass of NUM_PASSES) { cands = await readNumber(worker, still, R, pass, totals); if (cands.length) break; }
+  if (!cands.length) cands = await readPromo(worker, still, R, NUM_PASSES[0]);
+  return recognize(still, cands);
+}
+// Dalla sigla della carta (sv03.5-025) alla scheda breve, come le restituisce la ricerca per numero.
+async function briefFromId(id, lang) {
+  const setId = id.slice(0, id.lastIndexOf("-"));
+  for (const l of [...new Set([lang, fallbackLang(lang), "en"])]) {
+    try {
+      const d = await setData(l)(setId), c = (d.cards || []).find(x => x.id === id);
+      if (c) return { brief: { ...c, localId: String(c.localId), setId, setName: d.name, official: d.cardCount?.official || 0 }, lang: l };
+    } catch {}
+  }
+  return null;
 }
 
 // Elimina una copia (dalla scheda della carta, dal modulo o dalla scansione) con «Annulla» per qualche secondo.
@@ -2118,6 +2427,7 @@ function beep(ok) {
 
 function renderScan(banner) {
   setHeader("Scansiona", false);
+  Impronte.load();   // impronte delle illustrazioni: la prima volta si scaricano, poi restano sul telefono
   scan.lang ||= state.settings.scanLang || "auto";
   scan.cond ||= state.settings.cond;
   const variantOptions = [["auto", "Auto"], ["normal", "Normale"], ["reverse", "Reverse"], ["holo", "Holo"], ["firstEdition", "1ª ed."]];
@@ -2143,13 +2453,14 @@ function renderScan(banner) {
         <video id="video" playsinline muted></video>
         <div class="frame"><div class="numzone"></div></div>
         <div class="status" id="scan-status">${esc(scan.status || "Avvio la fotocamera…")}</div>
+        <button class="torch" id="torch" data-action="torch" aria-label="Luce" aria-pressed="${!!scan.torch}" ${scan.torchCap ? "" : "hidden"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 6H9z"/><path d="M9 8l1 5v9h4v-9l1-5"/><path d="M12 15v2"/></svg></button>
         <div class="controls">
           <button class="btn small" data-action="toggle-pause">${scan.paused ? "Riprendi" : "Pausa"}</button>
           <button class="shutter" data-action="shutter" aria-label="Scatta e riconosci la carta"><span></span></button>
           <button class="btn small ${scan.auto ? "gold" : ""}" data-action="toggle-auto" aria-pressed="${scan.auto}">Auto: ${scan.auto ? "sì" : "no"}</button>
         </div>
       </section>
-      <p class="note scan-hint">Tieni la carta dentro la cornice gialla: l'app legge numero, lingua e nome e salva la foto. Se non la riconosce, tocca il pulsante bianco per scattare.</p>`}
+      <p class="note scan-hint">Tieni la carta ferma dentro la cornice gialla: l'app la riconosce dall'illustrazione (o dal numero), la aggiunge e salva la foto. Se non la riconosce, tocca il pulsante bianco per scattare.</p>`}
     <section class="panel form session-bar" aria-label="Impostazioni della sessione">
       <div class="two">
         <div class="field"><label for="scan-lang">Edizione</label><select id="scan-lang"><option value="auto" ${scan.lang === "auto" ? "selected" : ""}>Automatica</option>${langOptions(scan.lang)}</select></div>
@@ -2160,7 +2471,7 @@ function renderScan(banner) {
       <form class="searchbar" id="manual-form"><input id="manual" placeholder="Numero, es. 025/165" aria-label="Numero stampato sulla carta" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="btn primary" type="submit">Aggiungi</button></form>
     </section>
     <div id="scan-panels"></div>`;
-  $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; findCache.clear(); scan.votes.clear(); scanLangs().forEach(l => setIndex(l)); Store.save(); };
+  $("#scan-lang").onchange = e => { scan.lang = state.settings.scanLang = e.target.value; scan.langOk = false; findCache.clear(); scan.votes.clear(); scanLangs().forEach(l => setIndex(l)); Store.save(); };
   $("#scan-cond").onchange = e => { scan.cond = e.target.value; };
   $("#manual-form").onsubmit = e => {
     e.preventDefault();
@@ -2319,6 +2630,7 @@ function openPanel(title, body, bind) {
     <div class="sheet-head"><h2>${esc(title)}</h2><button class="icon-btn" data-action="close-sheet-btn" aria-label="Chiudi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     ${body}</div></div>`;
   bind && bind();
+  syncBack();
 }
 function openSettings() {
   const lastB = state.lastBackup ? new Date(state.lastBackup).toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" }) : "mai";
@@ -2337,12 +2649,12 @@ function openSettings() {
     </section>
     <h3 class="section-title">Copia di sicurezza</h3>
     <section class="panel form">
-      <p class="note">La copia contiene tutte le carte, le impostazioni e le foto. Salvala in File › iCloud Drive o OneDrive dopo ogni sessione di scansione: se l'iPhone si rompe o togli l'app, la ripristini da lì. Ultima copia: <b>${lastB}</b>${unsavedCount() ? ` · <b>${unsavedCount()}</b> carte aggiunte dopo` : ""}.</p>
+      <p class="note">La copia contiene tutte le carte, le impostazioni e le foto. Salvala ${isIOS ? "in File › iCloud Drive o OneDrive" : isAndroid ? "su Google Drive o OneDrive (o nella cartella Download)" : "su OneDrive o in un'altra cartella sicura"} dopo ogni sessione di scansione: se ${isIOS ? "l'iPhone" : "il telefono"} si rompe o togli l'app, la ripristini da lì. Ultima copia: <b>${lastB}</b>${unsavedCount() ? ` · <b>${unsavedCount()}</b> carte aggiunte dopo` : ""}.</p>
       <div class="btn-row"><button class="btn gold" data-action="backup">Salva copia</button><label class="btn ghost" for="restore-input">Ripristina da copia</label><input id="restore-input" type="file" accept="application/json,.json" hidden></div>
     </section>
     <h3 class="section-title">Collezioni di famiglia</h3>
     <section class="panel form">
-      <p class="note">Per vedere le carte di un familiare (e lui le tue): chi condivide tocca <b>Condividi</b> nella Collezione e manda il file (WhatsApp, AirDrop o una cartella iCloud di famiglia). Chi lo riceve lo apre qui sotto. Per aggiornarla basta ricondividerla e riaprirla.</p>
+      <p class="note">Per vedere le carte di un familiare (e lui le tue): chi condivide tocca <b>Condividi</b> nella Collezione e manda il file (WhatsApp, ${isIOS ? "AirDrop o una cartella iCloud di famiglia" : isAndroid ? "Quick Share o una cartella Google Drive di famiglia" : "email o una cartella condivisa"}). Chi lo riceve lo apre qui sotto. Per aggiornarla basta ricondividerla e riaprirla.</p>
       <div class="field"><label for="owner-name">Il tuo nome (lo vede chi riceve la tua collezione)</label><input id="owner-name" value="${esc(state.settings.ownerName || "")}" placeholder="es. Daniele" autocomplete="off" maxlength="40"></div>
       <div class="btn-row"><button class="btn gold" data-action="share-mine">Condividi la mia collezione</button><label class="btn ghost" for="family-input">Apri una collezione ricevuta</label><input id="family-input" type="file" accept="application/json,.json" hidden></div>
       ${Family.list.length ? `<div>${Family.list.map(f => `<div class="row" style="padding-inline:0"><div class="grow"><b>${esc(f.name)}</b><span class="sub"> · ${f.copies} copie · ${euro(f.value)} · condivisa il ${esc(new Date(f.sharedAt).toLocaleDateString("it-IT", { day: "numeric", month: "short" }))}</span></div><button class="btn small" data-action="family-open" data-fam="${esc(f.id)}">Apri</button><button class="btn small ghost danger" data-action="family-remove" data-fam="${esc(f.id)}">Togli</button></div>`).join("")}</div>` : ""}
@@ -2398,15 +2710,15 @@ function openSettings() {
 }
 function openWelcome() {
   state.settings.onboarded = true; Store.save();
-  const showInstall = isIOS && !isStandalone() && !isPreview;
+  const showInstall = (isIOS || isAndroid) && !isStandalone() && !isPreview;
   openPanel("Benvenuto", `
     <div class="welcome-hero"><h3>Il tuo raccoglitore di carte Pokémon</h3><p style="margin:0">Scansioni le carte, l'app le archivia per edizione, serie ed espansione e ti dice quanto valgono su Cardmarket.</p></div>
     <div class="field"><div class="label">Quale edizione collezioni di più?</div>${seg("welcome-ed", ["it","en","ja","ko","zh-cn","zh-tw"].map(e => [e, `<span class="dot" ${edStyle(e)}></span>${LANG[e].short}`]), state.settings.lang, true)}</div>
     <ol class="steps">
-      <li><div><b>Scansiona</b><span class="sub">Tocca il pulsante giallo e tieni le carte una dopo l'altra nella cornice, con il numero (es. 025/165) nel riquadro in basso. Le carte si aggiungono da sole.</span></div></li>
+      <li><div><b>Scansiona</b><span class="sub">Tocca il pulsante giallo e tieni le carte una dopo l'altra nella cornice: l'app le riconosce dall'illustrazione o dal numero (es. 025/165) e le aggiunge da sola.</span></div></li>
       <li><div><b>Sfoglia il raccoglitore</b><span class="sub">Ogni espansione è un raccoglitore da 9 tasche: le carte che hai sono a colori, le mancanti in grigio.</span></div></li>
       <li><div><b>Tieni d'occhio valore e doppioni</b><span class="sub">Il valore si aggiorna ogni giorno; i doppioni finiscono in Scambi, pronti da esportare.</span></div></li>
-      ${showInstall ? `<li><div><b>Installa l'app</b><span class="sub">In Safari tocca Condividi, poi “Aggiungi alla schermata Home”.</span></div></li>` : ""}
+      ${showInstall ? `<li><div><b>Installa l'app</b><span class="sub">${installHow()}</span></div></li>` : ""}
     </ol>
     <button class="btn gold" data-action="welcome-done">Inizia</button>
     <a class="btn ghost" href="${esc(guideHref())}" target="_blank" rel="noopener" style="text-decoration:none">Leggi la guida completa</a>`);
@@ -2506,10 +2818,11 @@ async function openCard(id, lang, ed) {
 }
 function closeSheet() {
   sheet = null; $("#sheet-root").innerHTML = "";
-  if (ui.tab === "scan") renderScanPanels(); else render();
+  if (ui.tab === "scan") { renderScanPanels(); syncBack(); } else render();
 }
 function drawSheet() {
   const root = $("#sheet-root");
+  syncBack();
   if (!sheet) { root.innerHTML = ""; return; }
   const c = sheet.card;
   let body;
@@ -2692,7 +3005,10 @@ document.addEventListener("click", async e => {
   if (!el) return;
   const a = el.dataset.action;
   if (viewing && READ_ONLY_ACTIONS.has(a)) { toast(`Questa è la collezione di ${viewing.name}: qui puoi solo guardare`); return; }
-  if (!a && el.dataset.tab) { ui.tab = el.dataset.tab; ui.setView = null; ui.browse = null; window.scrollTo(0, 0); render(); return; }
+  if (!a && el.dataset.tab) {
+    if (el.dataset.tab === "scan" && ui.tab !== "scan") { scan.langOk = false; prefetchScan(); }
+    ui.tab = el.dataset.tab; ui.setView = null; ui.browse = null; window.scrollTo(0, 0); render(); return;
+  }
   switch (a) {
     case "browse": ui.browse = { ed: state.settings.lang && ["it","en","ja","ko","zh-cn","zh-tw"].includes(state.settings.lang) ? state.settings.lang : "it", serie: null }; render(); break;
     case "open-serie": ui.browse.serie = { id: el.dataset.id, name: el.dataset.name }; window.scrollTo(0, 0); render(); break;
@@ -2709,7 +3025,7 @@ document.addEventListener("click", async e => {
     case "edit-copy": { const cp = state.copies.find(x => x.id === el.dataset.copy); sheet.form = { ...cp, grader: cp.grader || "PSA" }; drawSheet(); $("#copy-form")?.scrollIntoView({ block: "start" }); break; }
     case "delete-copy": await deleteCopy(el.dataset.copy); break;
     case "shutter": if (scan.paused) { toast("Riprendi la lettura per scattare"); break; } scan.capture = true; setScanStatus("Scatto…", "hit"); break;
-    case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta: leggo il numero", ""); break;
+    case "toggle-pause": scan.paused = !scan.paused; el.textContent = scan.paused ? "Riprendi" : "Pausa"; setScanStatus(scan.paused ? "In pausa" : "Inquadra la carta", ""); break;
     case "toggle-auto": scan.auto = !scan.auto; el.classList.toggle("gold", scan.auto); el.setAttribute("aria-pressed", scan.auto); el.textContent = `Auto: ${scan.auto ? "sì" : "no"}`; break;
     case "pick": {
       const pend = scan.pending, b = pend?.items.find(x => x.id === el.dataset.id); if (!b) break;
@@ -2742,7 +3058,7 @@ document.addEventListener("click", async e => {
       await addFromCm({ ...b, name: pend.custom.name || b.name }, { ctx: { ...pend.ctx, lang: pend.custom.lang }, num: n && !n.promo ? { n: parseInt(n.number, 10) || n.number, t: n.total } : null });
       break;
     }
-    case "skip-pending": if (scan.pending?.preview) URL.revokeObjectURL(scan.pending.preview); scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta: leggo il numero", ""); break;
+    case "skip-pending": if (scan.pending?.preview) URL.revokeObjectURL(scan.pending.preview); scan.pending = null; renderScanPanels(); setScanStatus("Inquadra la carta", ""); break;
     case "cycle-variant": {
       const c = state.copies.find(x => x.id === el.dataset.copy), card = cardOf(c);
       const opts = Object.keys(card.variants).filter(k => card.variants[k]);
@@ -2829,6 +3145,13 @@ document.addEventListener("click", async e => {
     case "show-welcome": openWelcome(); break;
     case "welcome-done": closeSheet(); break;
     case "dismiss-install": state.settings.installDismissed = true; Store.save(); render(); break;
+    case "install": await installApp(); break;
+    case "torch": {
+      const track = stream?.getVideoTracks()[0]; if (!track) break;
+      scan.torch = !scan.torch;
+      try { await track.applyConstraints({ advanced: [{ torch: scan.torch }] }); } catch { scan.torch = false; toast("Questo telefono non accende la luce dall'app"); }
+      el.setAttribute("aria-pressed", String(scan.torch)); break;
+    }
     case "quick-add": {
       const c = sheet.card, ed = quickEd(c);
       let target = c;
@@ -2851,6 +3174,21 @@ $("#back").onclick = () => {
   render();
 };
 document.addEventListener("keydown", e => { if (e.key === "Escape" && sheet) closeSheet(); });
+// Tasto (o gesto) Indietro di Android: chiude la scheda aperta o torna alla schermata precedente, invece di uscire dall'app.
+// Finché non sei sulla schermata principale c'è un passo in più nella cronologia; il tasto Indietro lo consuma.
+const atRoot = () => !sheet && !ui.setView && !ui.browse && ui.tab === "collection";
+function syncBack() {
+  const guard = history.state?.raccoglitore;
+  if (!atRoot() && !guard) history.pushState({ raccoglitore: 1 }, "");
+  else if (atRoot() && guard) { syncBack.skip = true; history.back(); }
+}
+addEventListener("popstate", () => {
+  if (syncBack.skip) { syncBack.skip = false; return; }
+  if (sheet) closeSheet();
+  else if (ui.setView || ui.browse) $("#back").onclick();
+  else if (ui.tab !== "collection") { ui.tab = "collection"; window.scrollTo(0, 0); render(); }
+  syncBack();
+});
 document.addEventListener("visibilitychange", () => { if (document.hidden) stopScanner(); else if (ui.tab === "scan" && !scan.cameraOff) startScanner(); });
 
 // ================================================================ Dati di esempio (solo anteprima)
@@ -2942,6 +3280,9 @@ async function seedDemo() {
   try { if (navigator.storage?.persist) navigator.storage.persist(); } catch {}
   if ("serviceWorker" in navigator && location.protocol === "https:" && !isPreview) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (isPreview) $("#help-btn").href = GUIDE_URL;
+  // Scorciatoie dell'icona (su Android: tieni premuta l'icona dell'app): «Scansiona» e «Valore».
+  const vai = new URLSearchParams(location.search).get("vai");
+  if (["scan", "value", "trades", "search"].includes(vai) && !viewing) { ui.tab = vai; if (vai === "scan") prefetchScan(); history.replaceState(history.state, "", location.pathname); }
   render();
   if (!state.settings.onboarded) openWelcome();
   setIndex(state.settings.scanLang || state.settings.lang);
