@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Thkk7pi0cUFQLPxCM9Ym/2hp4wK8IReng2PinZQiRA4=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+OI3fpqml0Y286TOz9LrES6hhxI2kwmURRecI9VfpMg=' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://assets.tcgdex.net; font-src 'self'; connect-src 'self' https://api.tcgdex.net https://raw.githubusercontent.com; worker-src 'self' blob:; media-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -364,7 +364,7 @@ const RARITY_IT = {
   "mega hyper rare": "Mega iper rara", "black white rare": "Rara bianco e nero"
 };
 const APP_VERSION = "2.0";
-const APP_DATE = "2 novembre 2026";
+const APP_DATE = "8 novembre 2026";
 const GUIDE_URL = "https://claude.ai/artifact/3jA4rPapgx1RR4ZWzeLEEr";
 const API = "https://api.tcgdex.net/v2";
 // Listino pubblico di Cardmarket, scaricato ogni notte da un'azione GitHub sul ramo "dati" del repository dell'app.
@@ -1359,10 +1359,13 @@ async function renderBrowse(banner) {
 }
 
 // ================================================================ Scansione veloce
+// 0) (2.0) Riconoscimento dall'illustrazione: impronta della carta inquadrata confrontata con quelle del catalogo (ramo
+//    «impronte»); due fotogrammi d'accordo → carta trovata, lingua dalla scelta, dal codice stampato o da una lettura.
 // 1) Lettura continua del numero nella fascia bassa della carta, con tre trattamenti dell'immagine a rotazione.
 // 2) Conferma quando lo stesso numero torna due volte in pochi istanti.
 // 3) Analisi della carta intera: lingua (testo occidentale o scrittura asiatica), nome, foto.
 // 4) Ricerca nel catalogo: carta unica e nome coerente → aggiunta automatica con la foto; altrimenti scelta con un tocco.
+//    Con la lingua nota la carta si aggiunge subito; foto e variante arrivano dopo (finishLater).
 const scan = {
   lang: null, variant: "auto", cond: null, auto: true, lockSet: null,
   running: false, paused: false, busy: false, status: "", votes: new Map(), frame: 0, cooldown: new Map(),
