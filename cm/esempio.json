@@ -1,0 +1,453 @@
+{
+ "chiavi_prodotti": [
+  "version",
+  "createdAt",
+  "products"
+ ],
+ "primi": [
+  {
+   "idProduct": 273532,
+   "name": "Weedle [Multiply]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340471,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273533,
+   "name": "Kakuna [Bug Bite | Primal Clash]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340472,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273534,
+   "name": "Beedrill [Allergic Shock | Twineedle]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340473,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273535,
+   "name": "Tangela [Absorb | Vine Whip]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340146,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273536,
+   "name": "Tangrowth [Mega Drain | Grass Knot]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340519,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273537,
+   "name": "Treecko [Quick Attack]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 222510,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273538,
+   "name": "Grovyle [Pound | Agility]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340520,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273539,
+   "name": "Sceptile [Nurture and Heal | Jungle Edge]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340521,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273540,
+   "name": "Sceptile [Leaf Blade | Power Poison]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340522,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273541,
+   "name": "Lotad [Beat]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340474,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273542,
+   "name": "Lombre [Hook | Beat]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340475,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273543,
+   "name": "Ludicolo [Captivating Rhythm | Solar Ray]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340476,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273544,
+   "name": "Surskit [Stampede]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340477,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273545,
+   "name": "Masquerain [Spiral Gyration | Air Slash]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340478,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 273546,
+   "name": "Shroomish [Spore]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1585,
+   "idMetacard": 340523,
+   "dateAdded": "0000-00-00 00:00:00"
+  }
+ ],
+ "sawsbuck": [
+  {
+   "idProduct": 279752,
+   "name": "Sawsbuck [Nature Power | Horn Leech]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1571,
+   "idMetacard": 343091,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 279981,
+   "name": "Sawsbuck [Push Down | Take Down]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 1572,
+   "idMetacard": 342839,
+   "dateAdded": "0000-00-00 00:00:00"
+  },
+  {
+   "idProduct": 407734,
+   "name": "Sawsbuck [Seasonal Blessings | Bounce]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 2644,
+   "idMetacard": 284114,
+   "dateAdded": "2019-10-13 17:35:34"
+  },
+  {
+   "idProduct": 556572,
+   "name": "Sawsbuck [Seasonal Blessings | Bounce]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 3811,
+   "idMetacard": 284114,
+   "dateAdded": "2021-03-26 16:06:51"
+  },
+  {
+   "idProduct": 560422,
+   "name": "Sawsbuck [Tackle | Winter Horn]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 4171,
+   "idMetacard": 339306,
+   "dateAdded": "2021-04-16 10:42:58"
+  },
+  {
+   "idProduct": 567092,
+   "name": "Sawsbuck [Tackle | Winter Horn]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 4174,
+   "idMetacard": 339306,
+   "dateAdded": "2021-06-04 11:13:51"
+  },
+  {
+   "idProduct": 569477,
+   "name": "Sawsbuck [Push Down | Take Down]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 4208,
+   "idMetacard": 342839,
+   "dateAdded": "2021-06-17 11:33:37"
+  },
+  {
+   "idProduct": 569997,
+   "name": "Sawsbuck [Nature Power | Horn Leech]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 4214,
+   "idMetacard": 343091,
+   "dateAdded": "2021-06-21 16:27:32"
+  },
+  {
+   "idProduct": 752890,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 5574,
+   "idMetacard": 430084,
+   "dateAdded": "2024-01-25 00:31:34"
+  },
+  {
+   "idProduct": 752958,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 5574,
+   "idMetacard": 430084,
+   "dateAdded": "2024-01-25 01:27:30"
+  },
+  {
+   "idProduct": 760647,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 5589,
+   "idMetacard": 430084,
+   "dateAdded": "2024-03-10 00:24:51"
+  },
+  {
+   "idProduct": 760796,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 5589,
+   "idMetacard": 430084,
+   "dateAdded": "2024-03-10 01:43:28"
+  },
+  {
+   "idProduct": 828980,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6131,
+   "idMetacard": 450151,
+   "dateAdded": "2025-06-05 18:21:46"
+  },
+  {
+   "idProduct": 829446,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6131,
+   "idMetacard": 450151,
+   "dateAdded": "2025-06-06 13:18:10"
+  },
+  {
+   "idProduct": 835913,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6135,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-16 16:28:21"
+  },
+  {
+   "idProduct": 836079,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6135,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-16 17:05:05"
+  },
+  {
+   "idProduct": 836503,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6198,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-17 14:00:25"
+  },
+  {
+   "idProduct": 836504,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6198,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-17 14:00:47"
+  },
+  {
+   "idProduct": 838453,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6223,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-26 10:08:23"
+  },
+  {
+   "idProduct": 838454,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6223,
+   "idMetacard": 450151,
+   "dateAdded": "2025-07-26 10:08:37"
+  },
+  {
+   "idProduct": 843772,
+   "name": "Sawsbuck [Tackle | Winter Horn]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6267,
+   "idMetacard": 339306,
+   "dateAdded": "2025-08-19 13:16:29"
+  },
+  {
+   "idProduct": 860135,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6287,
+   "idMetacard": 450151,
+   "dateAdded": "2025-11-19 15:28:34"
+  },
+  {
+   "idProduct": 866656,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6416,
+   "idMetacard": 430084,
+   "dateAdded": "2026-01-19 10:57:31"
+  },
+  {
+   "idProduct": 871717,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:45:44"
+  },
+  {
+   "idProduct": 871718,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:45:58"
+  },
+  {
+   "idProduct": 871719,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:46:07"
+  },
+  {
+   "idProduct": 871720,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:46:14"
+  },
+  {
+   "idProduct": 871721,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:46:24"
+  },
+  {
+   "idProduct": 871722,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:46:33"
+  },
+  {
+   "idProduct": 871723,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6447,
+   "idMetacard": 430084,
+   "dateAdded": "2026-02-06 19:46:41"
+  },
+  {
+   "idProduct": 888724,
+   "name": "Sawsbuck [Seasonal Blessings | Bounce]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6582,
+   "idMetacard": 284114,
+   "dateAdded": "2026-05-22 13:58:55"
+  },
+  {
+   "idProduct": 890169,
+   "name": "Sawsbuck [Changing Seasons | Superpowered Horns]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6598,
+   "idMetacard": 430084,
+   "dateAdded": "2026-06-02 09:38:28"
+  },
+  {
+   "idProduct": 921727,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6929,
+   "idMetacard": 450151,
+   "dateAdded": "2026-11-04 14:49:07"
+  },
+  {
+   "idProduct": 921813,
+   "name": "Sawsbuck [Push Down | Solar Beam]",
+   "idCategory": 51,
+   "categoryName": "Pokémon Single",
+   "idExpansion": 6929,
+   "idMetacard": 450151,
+   "dateAdded": "2026-11-04 16:01:23"
+  }
+ ],
+ "gem_pack": []
+}
